@@ -9,6 +9,5 @@ REPOS=(
     "vote-shielded-vote-generator-ui|https://github.com/valargroup/vote-shielded-vote-generator-ui.git|main"
     "voting-circuits|https://github.com/valargroup/voting-circuits.git|main"
     "zcash-swift-wallet-sdk|git@github.com:valargroup/zcash-swift-wallet-sdk.git|valargroup/governance-tree-state"
-    "zebra|git@github.com:ZcashFoundation/zebra.git|main"
     "zodl-ios|git@github.com:valargroup/zodl-ios.git|valargroup/shielded-voting"
 )

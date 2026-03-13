@@ -14,7 +14,6 @@ Development workspace for Zcash shielded governance voting. Coordinates cross-re
 | `vote-shielded-vote-generator-ui` | Admin UI for round/proposal management                           | `main`                               |
 | `zcash-swift-wallet-sdk`          | Swift SDK with voting FFI (fork of zcash/zcash-swift-wallet-sdk) | `valargroup/governance-tree-state`   |
 | `zodl-ios`                        | iOS wallet app (fork of zodl-inc/zodl-ios)                       | `valargroup/shielded-voting`         |
-| `zebra`                           | Zcash node                                                       | `main`                               |
 
 Repos are standalone clones in gitignored directories — each has its own git history and remotes.
 

@@ -1,0 +1,14 @@
+# Child repos — each is a standalone clone, not managed by the umbrella.
+librustvoting/
+librustzcash/
+vote-nullifier-pir/
+vote-sdk/
+vote-shielded-vote-generator-ui/
+voting-circuits/
+zcash-swift-wallet-sdk/
+zebra/
+zodl-ios/
+
+# IDE / OS
+.DS_Store
+*.swp

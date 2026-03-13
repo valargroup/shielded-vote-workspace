@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+#MISE description="Apply local wiring (path deps for cross-repo development)"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/.wiring/repos.sh"
+
+applied=0
+skipped=0
+
+for entry in "${WIRED[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+    patch="$DIR/.wiring/$repo.patch"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        printf '\033[33mSkip %s — not a git repo\033[0m\n' "$repo"
+        ((skipped++)) || true
+        continue
+    fi
+
+    # Check if already applied
+    flags=$(git -C "$repo_dir" ls-files -v -- "$file" 2>/dev/null)
+    if [[ "$flags" == S* ]]; then
+        printf '  \033[36m●\033[0m %-40s already local\n' "$repo/$file"
+        ((skipped++)) || true
+        continue
+    fi
+
+    # Check for uncommitted changes
+    dirty=$(git -C "$repo_dir" diff --name-only -- "$file" 2>/dev/null || true)
+    staged=$(git -C "$repo_dir" diff --cached --name-only -- "$file" 2>/dev/null || true)
+    if [ -n "$dirty" ] || [ -n "$staged" ]; then
+        printf '\033[31mError: uncommitted changes in %s/%s\033[0m\n' "$repo" "$file"
+        echo "Commit or stash them before applying local wiring."
+        exit 1
+    fi
+
+    if [ ! -f "$patch" ]; then
+        printf '\033[31mError: patch not found: %s\033[0m\n' "$patch"
+        exit 1
+    fi
+
+    # Apply patch
+    git -C "$repo_dir" apply "$patch"
+    git -C "$repo_dir" update-index --skip-worktree "$file"
+    printf '  \033[32m✓\033[0m %-40s wired local\n' "$repo/$file"
+    ((applied++)) || true
+done
+
+# Skip-worktree on lock files
+for entry in "${WIRED_LOCKS[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+    if [ -d "$repo_dir/.git" ]; then
+        git -C "$repo_dir" update-index --skip-worktree "$file" 2>/dev/null || true
+    fi
+done
+
+echo ""
+if [ "$applied" -gt 0 ]; then
+    printf '\033[32mLocal wiring applied.\033[0m (%d patched, %d skipped)\n' "$applied" "$skipped"
+else
+    printf '\033[36mAll files already wired local.\033[0m\n'
+fi
+printf 'Run \033[1mmise run wire:remote\033[0m to restore remote references.\n'

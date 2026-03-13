@@ -1,0 +1,18 @@
+[tools]
+rust = "stable"
+
+[tasks."wire:local"]
+description = "Apply local wiring (path deps for cross-repo development)"
+file = ".mise/tasks/wire/local"
+
+[tasks."wire:remote"]
+description = "Remove local wiring (restore remote/git references)"
+file = ".mise/tasks/wire/remote"
+
+[tasks."wire:status"]
+description = "Show current wiring state (local vs remote)"
+file = ".mise/tasks/wire/status"
+
+[tasks.sync]
+description = "Clone missing repos or fetch existing ones"
+file = ".mise/tasks/sync"

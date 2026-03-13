@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+#MISE description="Clone missing repos or fetch existing ones"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+source "$DIR/repos.sh"
+
+for entry in "${REPOS[@]}"; do
+    IFS='|' read -r dir url branch <<< "$entry"
+    repo_dir="$DIR/$dir"
+
+    if [ -d "$repo_dir/.git" ]; then
+        printf '  \033[36m↻\033[0m %-40s fetch\n' "$dir"
+        git -C "$repo_dir" fetch --quiet origin
+    else
+        printf '  \033[32m↓\033[0m %-40s clone → %s\n' "$dir" "$branch"
+        git clone --quiet -b "$branch" "$url" "$repo_dir"
+    fi
+done
+
+echo ""
+printf '\033[32mSync complete.\033[0m All repos present.\n'

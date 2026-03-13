@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#MISE description="Show current wiring state (local vs remote)"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/.wiring/repos.sh"
+
+printf '\033[1mWiring status\033[0m\n'
+printf '═════════════\n\n'
+
+local_count=0
+remote_count=0
+missing=0
+
+for entry in "${WIRED[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        printf '  \033[31m○\033[0m %-40s \033[31mnot a git repo\033[0m\n' "$repo/$file"
+        ((missing++)) || true
+        continue
+    fi
+
+    flags=$(git -C "$repo_dir" ls-files -v -- "$file" 2>/dev/null)
+    if [[ "$flags" == S* ]]; then
+        printf '  \033[36m●\033[0m %-40s \033[36mlocal\033[0m\n' "$repo/$file"
+        ((local_count++)) || true
+    else
+        printf '  \033[32m●\033[0m %-40s \033[32mremote\033[0m\n' "$repo/$file"
+        ((remote_count++)) || true
+    fi
+done
+
+echo ""
+if [ "$local_count" -gt 0 ] && [ "$remote_count" -gt 0 ]; then
+    printf '  \033[33mMixed state!\033[0m Run wire:local or wire:remote to normalize.\n'
+elif [ "$local_count" -gt 0 ]; then
+    printf '  All files wired for \033[36mlocal development\033[0m.\n'
+else
+    printf '  All files wired for \033[32mremote/fork\033[0m references.\n'
+fi

@@ -1,0 +1,54 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 5adbf6d4..f4b9cc67 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -77,8 +77,9 @@ rust_decimal = { version = "1", default-features = false, features = ["c-repr"]
+ xz2 = { version = "0.1", features = ["static"] }
+ 
+ # Voting
+-librustvoting = { git = "https://github.com/valargroup/librustvoting.git" }
+-voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git" }
++# Local overrides: use sibling repo paths.
++librustvoting = { path = "../librustvoting/librustvoting" }
++voting-circuits = { path = "../voting-circuits/voting-circuits" }
+ zcash_keys = { version = "0.12", features = ["orchard"] }
+ incrementalmerkletree = { version = "0.8", default-features = false }
+ 
+@@ -95,19 +96,22 @@ crate-type = ["staticlib"]
+ [profile.release]
+ lto = true
+ 
+-# Patches to align librustvoting's dependencies with the SDK's.
+-# orchard: voting-circuits fork (upstream 0.11 + pub visibility for
+-#   constants/spec + shared_primitives gadget for voting ZKPs).
+-# librustzcash crates: governance extensions branch with PCZT/key
+-#   visibility changes needed for voting delegation flows.
++# Local overrides: sibling repos as relative paths.
+ [patch.crates-io]
+-orchard = { git = "https://github.com/valargroup/voting-circuits.git" }
+-pczt              = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_keys        = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_protocol    = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_address     = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_encoding    = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_transparent = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_client_sqlite  = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_client_backend = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-zcash_primitives  = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
++orchard            = { path = "../voting-circuits/orchard" }
++pczt               = { path = "../librustzcash/pczt" }
++zcash_keys         = { path = "../librustzcash/zcash_keys" }
++zcash_protocol     = { path = "../librustzcash/components/zcash_protocol" }
++zcash_address      = { path = "../librustzcash/components/zcash_address" }
++zcash_encoding     = { path = "../librustzcash/components/zcash_encoding" }
++zcash_transparent  = { path = "../librustzcash/zcash_transparent" }
++zcash_client_sqlite  = { path = "../librustzcash/zcash_client_sqlite" }
++zcash_client_backend = { path = "../librustzcash/zcash_client_backend" }
++zcash_primitives   = { path = "../librustzcash/zcash_primitives" }
++
++[patch."https://github.com/valargroup/vote-nullifier-pir.git"]
++imt-tree   = { path = "../vote-nullifier-pir/imt-tree" }
++pir-client = { path = "../vote-nullifier-pir/pir/client" }
++
++[patch."https://github.com/valargroup/voting-circuits.git"]
++voting-circuits = { path = "../voting-circuits/voting-circuits" }

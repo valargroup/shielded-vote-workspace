@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#MISE description="Remove local wiring (restore remote/git references)"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/.wiring/repos.sh"
+
+for entry in "${WIRED[@]}" "${WIRED_LOCKS[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        continue
+    fi
+
+    git -C "$repo_dir" update-index --no-skip-worktree "$file" 2>/dev/null || true
+done
+
+for entry in "${WIRED[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        continue
+    fi
+
+    git -C "$repo_dir" checkout -- "$file" 2>/dev/null || true
+    printf '  \033[32m●\033[0m %-40s restored remote\n' "$repo/$file"
+done
+
+for entry in "${WIRED_LOCKS[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        continue
+    fi
+
+    git -C "$repo_dir" checkout -- "$file" 2>/dev/null || true
+done
+
+echo ""
+printf '\033[32mRemote wiring restored.\033[0m Dependencies point to git URLs.\n'
+printf 'Run \033[1mmise run wire:local\033[0m to switch back to local paths.\n'

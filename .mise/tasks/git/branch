@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#MISE description="Create a feature branch across repos"
+#MISE quiet=true
+#MISE alias="br"
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/repos.sh"
+
+name="${1:-}"
+if [ -z "$name" ]; then
+    echo "Usage: mise run git:branch <name> [repo...]"
+    echo ""
+    echo "Creates branch <name> in specified repos (or all repos if none given)."
+    echo "Branches from each repo's current HEAD."
+    echo ""
+    echo "Examples:"
+    echo "  mise run git:branch voting-rewire"
+    echo "  mise run git:branch voting-rewire librustzcash librustvoting"
+    exit 1
+fi
+shift
+
+# Build list of target repos
+if [ $# -gt 0 ]; then
+    targets=("$@")
+else
+    targets=()
+    for entry in "${REPOS[@]}"; do
+        IFS='|' read -r dir _ _ <<< "$entry"
+        targets+=("$dir")
+    done
+fi
+
+created=0
+for target in "${targets[@]}"; do
+    repo_dir="$DIR/$target"
+    if [ ! -d "$repo_dir/.git" ]; then
+        printf '  \033[33m⊘\033[0m %-35s not cloned\n' "$target"
+        continue
+    fi
+
+    current=$(git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+    # Check if branch already exists
+    if git -C "$repo_dir" rev-parse --verify "$name" &>/dev/null; then
+        printf '  \033[36m●\033[0m %-35s already exists (on %s)\n' "$target" "$current"
+        continue
+    fi
+
+    git -C "$repo_dir" checkout -b "$name" 2>/dev/null
+    printf '  \033[32m✓\033[0m %-35s %s → %s\n' "$target" "$current" "$name"
+    ((created++)) || true
+done
+
+echo ""
+if [ "$created" -gt 0 ]; then
+    printf '\033[32mCreated %d branch(es).\033[0m\n' "$created"
+else
+    printf 'No branches created.\n'
+fi

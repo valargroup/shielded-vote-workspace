@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+#MISE description="Fetch origins and show ahead/behind for each repo"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/repos.sh"
+
+printf '\033[1mFetching and checking drift...\033[0m\n\n'
+
+for entry in "${REPOS[@]}"; do
+    IFS='|' read -r dir url branch <<< "$entry"
+    repo_dir="$DIR/$dir"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        printf '  \033[31m○\033[0m \033[1m%-35s\033[0m not cloned\n' "$dir"
+        continue
+    fi
+
+    current=$(git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+
+    # Fetch quietly
+    git -C "$repo_dir" fetch --quiet origin 2>/dev/null || true
+
+    # Check ahead/behind vs origin
+    if git -C "$repo_dir" rev-parse --verify "origin/$current" &>/dev/null; then
+        ahead=$(git -C "$repo_dir" rev-list --count "origin/$current..HEAD" 2>/dev/null || echo "?")
+        behind=$(git -C "$repo_dir" rev-list --count "HEAD..origin/$current" 2>/dev/null || echo "?")
+
+        if [ "$ahead" = "0" ] && [ "$behind" = "0" ]; then
+            printf '  \033[32m●\033[0m \033[1m%-35s\033[0m \033[36m%s\033[0m  up to date\n' "$dir" "$current"
+        else
+            printf '  \033[33m●\033[0m \033[1m%-35s\033[0m \033[36m%s\033[0m  \033[32m+%s\033[0m/\033[31m-%s\033[0m vs origin\n' \
+                "$dir" "$current" "$ahead" "$behind"
+        fi
+    else
+        printf '  \033[36m●\033[0m \033[1m%-35s\033[0m \033[36m%s\033[0m  (no remote tracking)\n' "$dir" "$current"
+    fi
+
+    # Also check upstream remote if it exists
+    if git -C "$repo_dir" remote get-url upstream &>/dev/null; then
+        git -C "$repo_dir" fetch --quiet upstream 2>/dev/null || true
+        # Try upstream/main first, then upstream/$branch
+        upstream_ref=""
+        for ref in "upstream/main" "upstream/$branch"; do
+            if git -C "$repo_dir" rev-parse --verify "$ref" &>/dev/null; then
+                upstream_ref="$ref"
+                break
+            fi
+        done
+        if [ -n "$upstream_ref" ]; then
+            u_ahead=$(git -C "$repo_dir" rev-list --count "$upstream_ref..HEAD" 2>/dev/null || echo "?")
+            u_behind=$(git -C "$repo_dir" rev-list --count "HEAD..$upstream_ref" 2>/dev/null || echo "?")
+            printf '    \033[90m└ vs %s: +%s/-%s\033[0m\n' "$upstream_ref" "$u_ahead" "$u_behind"
+        fi
+    fi
+done

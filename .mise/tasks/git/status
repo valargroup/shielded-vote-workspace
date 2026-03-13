@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#MISE description="Show git status across all repos"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/repos.sh"
+
+for entry in "${REPOS[@]}"; do
+    IFS='|' read -r dir url branch <<< "$entry"
+    repo_dir="$DIR/$dir"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        printf '  \033[31m○\033[0m \033[1m%-35s\033[0m not cloned\n' "$dir"
+        continue
+    fi
+
+    current=$(git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+    dirty=$(git -C "$repo_dir" status --porcelain 2>/dev/null | head -5)
+
+    if [ -n "$dirty" ]; then
+        n=$(git -C "$repo_dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+        printf '  \033[33m●\033[0m \033[1m%-35s\033[0m \033[36m%s\033[0m  \033[33m%s changed\033[0m\n' "$dir" "$current" "$n"
+    else
+        printf '  \033[32m●\033[0m \033[1m%-35s\033[0m \033[36m%s\033[0m\n' "$dir" "$current"
+    fi
+done

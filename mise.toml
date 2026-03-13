@@ -13,6 +13,22 @@ file = ".mise/tasks/wire/remote"
 description = "Show current wiring state (local vs remote)"
 file = ".mise/tasks/wire/status"
 
-[tasks.sync]
+[tasks."git:sync"]
 description = "Clone missing repos or fetch existing ones"
-file = ".mise/tasks/sync"
+file = ".mise/tasks/git/sync"
+
+[tasks."git:status"]
+description = "Show git status across all repos"
+file = ".mise/tasks/git/status"
+
+[tasks."git:branch"]
+description = "Create a feature branch across repos"
+file = ".mise/tasks/git/branch"
+
+[tasks."git:push"]
+description = "Push all repos that have unpushed commits"
+file = ".mise/tasks/git/push"
+
+[tasks."git:drift"]
+description = "Fetch origins and show ahead/behind for each repo"
+file = ".mise/tasks/git/drift"

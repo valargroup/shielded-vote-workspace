@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#MISE description="Push all repos that have unpushed commits"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/repos.sh"
+
+pushed=0
+
+for entry in "${REPOS[@]}"; do
+    IFS='|' read -r dir url branch <<< "$entry"
+    repo_dir="$DIR/$dir"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        continue
+    fi
+
+    current=$(git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ "$current" = "HEAD" ] || [ -z "$current" ]; then
+        continue
+    fi
+
+    # Check if there are commits to push
+    ahead=$(git -C "$repo_dir" rev-list --count "@{upstream}..HEAD" 2>/dev/null || echo "new")
+    if [ "$ahead" = "0" ]; then
+        continue
+    fi
+
+    printf '  \033[32m↑\033[0m %-35s %s (%s ahead)\n' "$dir" "$current" "$ahead"
+    git -C "$repo_dir" push -u origin "$current"
+    ((pushed++)) || true
+done
+
+echo ""
+if [ "$pushed" -gt 0 ]; then
+    printf '\033[32mPushed %d repo(s).\033[0m\n' "$pushed"
+else
+    printf 'Nothing to push.\n'
+fi

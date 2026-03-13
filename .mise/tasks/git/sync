@@ -3,7 +3,7 @@
 #MISE quiet=true
 set -euo pipefail
 
-DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 source "$DIR/repos.sh"
 
 for entry in "${REPOS[@]}"; do

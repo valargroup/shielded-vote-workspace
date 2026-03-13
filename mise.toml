@@ -25,6 +25,10 @@ file = ".mise/tasks/start/all"
 description = "Build + init + start single-validator chain"
 file = ".mise/tasks/start/chain"
 
+[tasks."start:ios"]
+description = "Build xcframework for simulator + open Xcode"
+file = ".mise/tasks/start/ios"
+
 [tasks.stop]
 description = "Stop all services"
 file = ".mise/tasks/stop"

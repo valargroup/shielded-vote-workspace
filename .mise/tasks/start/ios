@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+#MISE description="Build xcframework for simulator + open Xcode"
+#MISE quiet=true
+set -e
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+SDK_DIR="$DIR/zcash-swift-wallet-sdk"
+
+if [ ! -d "$SDK_DIR/.git" ]; then
+    printf '\033[31mError: zcash-swift-wallet-sdk not cloned. Run: mise run git:sync\033[0m\n'
+    exit 1
+fi
+
+# ── Ensure LocalPackages exists ──────────────────────────────────
+if [ ! -d "$SDK_DIR/LocalPackages" ]; then
+    printf '\033[36mInitializing LocalPackages (first time only)...\033[0m\n'
+    # Create the SPM wrapper — rebuild-local-ffi.sh will populate the xcframework
+    mkdir -p "$SDK_DIR/LocalPackages"
+    cat > "$SDK_DIR/LocalPackages/Package.swift" << 'EOF'
+// swift-tools-version:5.6
+import PackageDescription
+
+let package = Package(
+    name: "libzcashlc",
+    products: [
+        .library(name: "libzcashlc", targets: ["libzcashlc"])
+    ],
+    targets: [
+        .binaryTarget(
+            name: "libzcashlc",
+            path: "libzcashlc.xcframework"
+        )
+    ]
+)
+EOF
+fi
+
+# ── Build Rust for iOS Simulator ─────────────────────────────────
+printf '\033[36mBuilding Rust FFI for iOS Simulator...\033[0m\n'
+"$SDK_DIR/Scripts/rebuild-local-ffi.sh" ios-sim
+
+# ── Open Xcode ──────────────────────────────────────────────────
+WORKSPACE="$DIR/zodl-ios/secant.xcworkspace"
+if [ -d "$WORKSPACE" ]; then
+    printf '\033[32mOpening zodl-ios in Xcode...\033[0m\n'
+    open "$WORKSPACE"
+    echo ""
+    echo "Xcode is ready. Use Cmd+R to build and run on the simulator."
+    echo "After Rust changes, re-run: mise run start:ios"
+else
+    printf '\033[33mzodl-ios workspace not found. Opening SDK instead.\033[0m\n'
+    open "$SDK_DIR"
+fi

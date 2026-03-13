@@ -26,6 +26,35 @@ mise run start:chain
 # ── Admin UI ─────────────────────────────────────────────────────
 UI_DIR="$DIR/vote-shielded-vote-generator-ui"
 if [ -d "$UI_DIR" ]; then
+    UI_ENV="$UI_DIR/.env"
+
+    # Ensure .env exists (copy from .env.example if missing).
+    if [ ! -f "$UI_ENV" ] && [ -f "$UI_DIR/.env.example" ]; then
+        cp "$UI_DIR/.env.example" "$UI_ENV"
+        printf '\033[32mCreated admin UI .env from .env.example\033[0m\n'
+    fi
+
+    # Inject VM_PRIVKEY from vote-sdk into admin UI .env.
+    VM_KEY=""
+    if [ -f "$DIR/vote-sdk/.env" ]; then
+        VM_KEY=$(grep '^VM_PRIVKEY=' "$DIR/vote-sdk/.env" | cut -d= -f2)
+    fi
+    if [ -n "$VM_KEY" ] && [ -f "$UI_ENV" ]; then
+        EXISTING=$(grep '^VITE_VM_PRIVKEY=' "$UI_ENV" 2>/dev/null | cut -d= -f2)
+        if [ -z "$EXISTING" ]; then
+            # Key is missing or empty — inject it.
+            if grep -q '^VITE_VM_PRIVKEY=' "$UI_ENV"; then
+                sed -i.bak "s/^VITE_VM_PRIVKEY=.*/VITE_VM_PRIVKEY=$VM_KEY/" "$UI_ENV"
+                rm -f "$UI_ENV.bak"
+            else
+                echo "VITE_VM_PRIVKEY=$VM_KEY" >> "$UI_ENV"
+            fi
+            printf '\033[32mInjected VM_PRIVKEY into admin UI .env\033[0m\n'
+        else
+            printf '\033[33mAdmin UI .env already has VITE_VM_PRIVKEY set\033[0m\n'
+        fi
+    fi
+
     (cd "$UI_DIR" && npm install --silent && nohup npm run dev > "$DIR/ui.log" 2>&1 &)
     printf '\033[32mStarted admin UI → ui.log (port 5173)\033[0m\n'
 fi

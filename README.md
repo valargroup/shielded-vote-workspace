@@ -56,7 +56,15 @@ To start just the chain without nullifiers: `mise run start:chain`
 
 ### iOS app
 
-After `mise run start`, open `zodl-ios/secant.xcworkspace` in Xcode and build the `secant-mainnet` scheme for iOS Simulator. The local voting config is created automatically by `start:chain`.
+```
+mise run start:ios        # build Rust xcframework for simulator + open Xcode
+```
+
+This builds the Rust FFI as a local xcframework (arm64 simulator only — fast incremental builds), sets up `LocalPackages/` so the SDK auto-detects it, and opens `zodl-ios/secant.xcworkspace`. From there, Cmd+R builds Swift and launches on the simulator.
+
+After Rust code changes, re-run `mise run start:ios` to rebuild the xcframework, then Cmd+R again in Xcode. Swift-only changes just need Cmd+R.
+
+The local voting config (`voting-config-local.json`) is created automatically by `start:chain`.
 
 ## Tasks
 
@@ -65,6 +73,7 @@ After `mise run start`, open `zodl-ios/secant.xcworkspace` in Xcode and build th
 ```
 mise run start            # nullifiers + chain + admin UI
 mise run start:chain      # chain only (+ iOS config)
+mise run start:ios        # build xcframework for simulator + open Xcode
 mise run stop             # stop all services
 mise run status           # service dashboard
 ```

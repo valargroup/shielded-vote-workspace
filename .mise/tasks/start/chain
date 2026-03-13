@@ -10,6 +10,14 @@ if pgrep svoted > /dev/null 2>&1; then
     exit 0
 fi
 
+# ── Ensure VM_PRIVKEY exists ─────────────────────────────────────
+ENV_FILE="$DIR/vote-sdk/.env"
+if [ ! -f "$ENV_FILE" ] || ! grep -q '^VM_PRIVKEY=.\+' "$ENV_FILE"; then
+    KEY=$(openssl rand -hex 32)
+    echo "VM_PRIVKEY=$KEY" >> "$ENV_FILE"
+    printf '\033[32mGenerated VM_PRIVKEY in vote-sdk/.env\033[0m\n'
+fi
+
 # ── Build + init ─────────────────────────────────────────────────
 make -C "$DIR/vote-sdk" init
 

@@ -4,12 +4,15 @@
 
 WIRED=(
     "librustvoting:Cargo.toml"
+    "voting-circuits:voting-circuits/Cargo.toml"
+    "vote-sdk:circuits/Cargo.toml"
     "zcash-swift-wallet-sdk:Cargo.toml"
     "zodl-ios:modules/Package.swift"
 )
 
 WIRED_LOCKS=(
     "librustvoting:Cargo.lock"
+    "voting-circuits:voting-circuits/Cargo.lock"
     "zcash-swift-wallet-sdk:Cargo.lock"
     "zodl-ios:modules/Package.resolved"
 )

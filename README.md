@@ -59,7 +59,7 @@ To start just the chain without nullifiers: `mise run start:chain`
 mise run start:ios        # build Rust xcframework for simulator + open Xcode
 ```
 
-This builds the Rust FFI as a local xcframework (arm64 simulator only — fast incremental builds), sets up `LocalPackages/` so the SDK auto-detects it, and opens `zodl-ios/secant.xcworkspace`. From there, Cmd+R builds Swift and launches on the simulator.
+This builds the Rust FFI as a local xcframework (arm64 simulator only — fast incremental builds), sets up `LocalPackages/` so the SDK auto-detects it, and opens `zodl-ios/secant.xcodeproj`. From there, Cmd+R builds Swift and launches on the simulator.
 
 After Rust code changes, re-run `mise run start:ios` to rebuild the xcframework, then Cmd+R again in Xcode. Swift-only changes just need Cmd+R.
 

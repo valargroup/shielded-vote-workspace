@@ -40,14 +40,14 @@ printf '\033[36mBuilding Rust FFI for iOS Simulator...\033[0m\n'
 "$SDK_DIR/Scripts/rebuild-local-ffi.sh" ios-sim
 
 # ── Open Xcode ──────────────────────────────────────────────────
-WORKSPACE="$DIR/zodl-ios/secant.xcworkspace"
-if [ -d "$WORKSPACE" ]; then
+PROJECT="$DIR/zodl-ios/secant.xcodeproj"
+if [ -d "$PROJECT" ]; then
     printf '\033[32mOpening zodl-ios in Xcode...\033[0m\n'
-    open "$WORKSPACE"
+    open "$PROJECT"
     echo ""
     echo "Xcode is ready. Use Cmd+R to build and run on the simulator."
     echo "After Rust changes, re-run: mise run start:ios"
 else
-    printf '\033[33mzodl-ios workspace not found. Opening SDK instead.\033[0m\n'
+    printf '\033[33mzodl-ios project not found. Opening SDK instead.\033[0m\n'
     open "$SDK_DIR"
 fi

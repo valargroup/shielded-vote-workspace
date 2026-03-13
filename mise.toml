@@ -13,6 +13,10 @@ file = ".mise/tasks/wire/remote"
 description = "Show current wiring state (local vs remote)"
 file = ".mise/tasks/wire/status"
 
+[tasks."wire:update"]
+description = "Regenerate wiring patches from current working tree"
+file = ".mise/tasks/wire/update"
+
 [tasks."git:sync"]
 description = "Clone missing repos or fetch existing ones"
 file = ".mise/tasks/git/sync"

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate wiring patches from current working tree"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/.wiring/repos.sh"
+
+# Verify we're wired local
+any_wired=false
+for entry in "${WIRED[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+    if [ -d "$repo_dir/.git" ]; then
+        flags=$(git -C "$repo_dir" ls-files -v -- "$file" 2>/dev/null)
+        if [[ "$flags" == S* ]]; then
+            any_wired=true
+            break
+        fi
+    fi
+done
+
+if [ "$any_wired" = false ]; then
+    printf '\033[31mError: local wiring is not applied.\033[0m\n'
+    echo "Apply local wiring first (mise run wire:local), make your changes,"
+    echo "then re-run this to capture the updated patches."
+    exit 1
+fi
+
+updated=0
+
+for entry in "${WIRED[@]}"; do
+    repo="${entry%%:*}"
+    file="${entry#*:}"
+    repo_dir="$DIR/$repo"
+    patch="$DIR/.wiring/$repo.patch"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        continue
+    fi
+
+    # Temporarily clear skip-worktree so git diff sees the changes
+    git -C "$repo_dir" update-index --no-skip-worktree "$file" 2>/dev/null || true
+
+    # Capture the diff
+    diff_output=$(git -C "$repo_dir" diff -- "$file" 2>/dev/null || true)
+
+    # Restore skip-worktree
+    git -C "$repo_dir" update-index --skip-worktree "$file" 2>/dev/null || true
+
+    if [ -n "$diff_output" ]; then
+        echo "$diff_output" > "$patch"
+        lines=$(echo "$diff_output" | wc -l | tr -d ' ')
+        printf '  \033[32m✓\033[0m %-35s %s (%s lines)\n' "$repo" "$(basename "$patch")" "$lines"
+        ((updated++)) || true
+    else
+        printf '  \033[36m●\033[0m %-35s no diff (file matches committed)\n' "$repo"
+    fi
+done
+
+echo ""
+if [ "$updated" -gt 0 ]; then
+    printf '\033[32m%d patch(es) updated.\033[0m Remember to commit the patch files.\n' "$updated"
+else
+    printf 'No patches changed.\n'
+fi

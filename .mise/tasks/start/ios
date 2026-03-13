@@ -35,9 +35,29 @@ let package = Package(
 EOF
 fi
 
-# ── Build Rust for iOS Simulator ─────────────────────────────────
-printf '\033[36mBuilding Rust FFI for iOS Simulator...\033[0m\n'
-"$SDK_DIR/Scripts/rebuild-local-ffi.sh" ios-sim
+# ── Build Rust for iOS Simulator (skip if up to date) ────────────
+BUILT_LIB="$SDK_DIR/target/aarch64-apple-ios-sim/release/libzcashlc.a"
+XCFW_LIB="$SDK_DIR/LocalPackages/libzcashlc.xcframework/ios-arm64_x86_64-simulator/libzcashlc.framework/libzcashlc"
+
+needs_build=true
+if [ -f "$XCFW_LIB" ] && [ -f "$BUILT_LIB" ]; then
+    # Skip if xcframework copy is newer than (or same as) the cargo output
+    if [ ! "$BUILT_LIB" -nt "$XCFW_LIB" ]; then
+        # Also check if any Rust source is newer than the built lib
+        newer_src=$(find "$SDK_DIR/rust/src" "$DIR/librustvoting" "$DIR/librustzcash" "$DIR/voting-circuits" \
+            -name '*.rs' -newer "$BUILT_LIB" 2>/dev/null | head -1)
+        if [ -z "$newer_src" ]; then
+            needs_build=false
+        fi
+    fi
+fi
+
+if [ "$needs_build" = true ]; then
+    printf '\033[36mBuilding Rust FFI for iOS Simulator...\033[0m\n'
+    "$SDK_DIR/Scripts/rebuild-local-ffi.sh" ios-sim
+else
+    printf '\033[32mxcframework is up to date, skipping Rust build.\033[0m\n'
+fi
 
 # ── Open Xcode ──────────────────────────────────────────────────
 PROJECT="$DIR/zodl-ios/secant.xcodeproj"

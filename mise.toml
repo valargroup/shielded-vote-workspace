@@ -56,3 +56,7 @@ file = ".mise/tasks/git/push"
 [tasks."git:drift"]
 description = "Fetch origins and show ahead/behind for each repo"
 file = ".mise/tasks/git/drift"
+
+[tasks.logs]
+description = "Tail merged logs from svoted and nf-server"
+file = ".mise/tasks/logs"

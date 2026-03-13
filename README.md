@@ -75,6 +75,7 @@ mise run start:chain      # chain only (+ iOS config)
 mise run start:ios        # build xcframework for simulator + open Xcode
 mise run stop             # stop all services
 mise run status           # service dashboard
+mise run logs             # tail merged logs from svoted and nf-server
 ```
 
 ### Git coordination

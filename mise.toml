@@ -17,6 +17,22 @@ file = ".mise/tasks/wire/status"
 description = "Regenerate wiring patches from current working tree"
 file = ".mise/tasks/wire/update"
 
+[tasks.start]
+description = "Init chain + bootstrap nullifiers + start everything"
+file = ".mise/tasks/start/all"
+
+[tasks."start:chain"]
+description = "Build + init + start single-validator chain"
+file = ".mise/tasks/start/chain"
+
+[tasks.stop]
+description = "Stop all services"
+file = ".mise/tasks/stop"
+
+[tasks.status]
+description = "Show status of all services"
+file = ".mise/tasks/status"
+
 [tasks."git:sync"]
 description = "Clone missing repos or fetch existing ones"
 file = ".mise/tasks/git/sync"

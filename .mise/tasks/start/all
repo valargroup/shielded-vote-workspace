@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#MISE description="Init chain + bootstrap nullifiers + start everything"
+#MISE quiet=true
+set -e
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+
+PROCS=""
+pgrep svoted                   > /dev/null 2>&1 && PROCS="$PROCS svoted"
+pgrep -f 'nf-server.*serve'   > /dev/null 2>&1 && PROCS="$PROCS nf-server"
+if [ -n "$PROCS" ]; then
+    printf '\033[33mAlready running:%s\033[0m\n' "$PROCS"
+    exit 0
+fi
+
+# ── Nullifier pipeline (independent of chain build) ─────────────
+make -C "$DIR/vote-nullifier-pir" bootstrap
+make -C "$DIR/vote-nullifier-pir" ingest
+make -C "$DIR/vote-nullifier-pir" export-nf
+nohup make -C "$DIR/vote-nullifier-pir" serve > "$DIR/nf-serve.log" 2>&1 &
+printf '\033[32mStarted nf-server → nf-serve.log\033[0m\n'
+
+# ── Chain (build + init + start + wait + register) ──────────────
+mise run start:chain
+
+# ── Admin UI ─────────────────────────────────────────────────────
+UI_DIR="$DIR/vote-shielded-vote-generator-ui"
+if [ -d "$UI_DIR" ]; then
+    (cd "$UI_DIR" && npm install --silent && nohup npm run dev > "$DIR/ui.log" 2>&1 &)
+    printf '\033[32mStarted admin UI → ui.log (port 5173)\033[0m\n'
+fi

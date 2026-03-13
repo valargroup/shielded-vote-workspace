@@ -9,6 +9,11 @@ zcash-swift-wallet-sdk/
 zebra/
 zodl-ios/
 
+# Service logs
+svoted.log
+nf-serve.log
+ui.log
+
 # IDE / OS
 .DS_Store
 *.swp

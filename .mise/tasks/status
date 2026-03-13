@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+#MISE description="Show status of all services"
+#MISE quiet=true
+
+DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+
+# ── Chain ─────────────────────────────────────────────────────────
+printf "chain          "
+STATUS=$(svoted status --home ~/.svoted 2>/dev/null) || true
+if [ -n "$STATUS" ]; then
+    HEIGHT=$(echo "$STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sync_info',{}).get('latest_block_height','?'))" 2>/dev/null || echo "?")
+    printf '\033[32m● running\033[0m   block %s\n' "$HEIGHT"
+else
+    printf '\033[31m○ stopped\033[0m\n'
+fi
+
+# ── nf-server ────────────────────────────────────────────────────
+printf "nf-server      "
+if pgrep -f 'nf-server.*serve' > /dev/null 2>&1; then
+    printf '\033[32m● running\033[0m   port 3000\n'
+elif pgrep -f 'cargo.*nf-server' > /dev/null 2>&1; then
+    printf '\033[33m● building\033[0m  (cargo compile in progress)\n'
+else
+    printf '\033[31m○ stopped\033[0m\n'
+fi
+
+# ── Nullifier data ───────────────────────────────────────────────
+printf "nullifiers     "
+CP="$DIR/vote-nullifier-pir/nullifiers.checkpoint"
+if [ -f "$CP" ]; then
+    HEIGHT=$(od -An -t u8 -j 0 -N 8 "$CP" | tr -d ' ')
+    BYTES=$(wc -c < "$DIR/vote-nullifier-pir/nullifiers.bin" 2>/dev/null | tr -d ' ')
+    COUNT=$((BYTES / 32))
+    printf '\033[32m✓ synced\033[0m    height %s  %sM nullifiers\n' "$HEIGHT" "$((COUNT / 1000000))"
+else
+    printf '\033[31m✗ no data\033[0m   run: mise run start\n'
+fi
+
+printf "pir-data       "
+if [ -f "$DIR/vote-nullifier-pir/pir-data/tier0.bin" ]; then
+    printf '\033[32m✓ exported\033[0m\n'
+else
+    printf '\033[31m✗ not exported\033[0m\n'
+fi
+
+# ── Admin UI ─────────────────────────────────────────────────────
+printf "admin-ui       "
+if pgrep -f 'node.*vote-shielded-vote-generator' > /dev/null 2>&1; then
+    printf '\033[32m● running\033[0m   port 5173\n'
+else
+    printf '\033[31m○ stopped\033[0m\n'
+fi
+
+# ── iOS config ───────────────────────────────────────────────────
+printf "ios-config     "
+if [ -f "$DIR/zodl-ios/secant/Resources/voting-config-local.json" ]; then
+    printf '\033[32m✓ present\033[0m\n'
+else
+    printf '\033[90m○ not set\033[0m  (created by start:chain)\n'
+fi
+
+# ── Paths ─────────────────────────────────────────────────────────
+echo ""
+printf '\033[2m'
+echo "Chain data     ~/.svoted/"
+echo "Chain log      ./svoted.log"
+echo "Nullifier data vote-nullifier-pir/nullifiers.{bin,checkpoint}"
+echo "PIR data       vote-nullifier-pir/pir-data/"
+echo "nf-server log  ./nf-serve.log"
+echo "Admin UI       vote-shielded-vote-generator-ui/"
+printf '\033[0m'

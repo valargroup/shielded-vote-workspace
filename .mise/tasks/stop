@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#MISE description="Stop all services"
+#MISE quiet=true
+
+DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+
+KILLED=""
+pkill svoted    2>/dev/null && KILLED="$KILLED svoted"    || true
+pkill nf-server 2>/dev/null && KILLED="$KILLED nf-server" || true
+pkill -f 'node.*vote-shielded-vote-generator' 2>/dev/null && KILLED="$KILLED admin-ui" || true
+if [ -n "$KILLED" ]; then
+    printf '\033[32mStopped:%s\033[0m\n' "$KILLED"
+else
+    echo "No running processes found."
+fi
+rm -f "$DIR/zodl-ios/secant/Resources/voting-config-local.json"

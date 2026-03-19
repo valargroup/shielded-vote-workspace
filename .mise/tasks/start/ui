@@ -31,16 +31,14 @@ if [ -f "$DIR/vote-sdk/.env" ]; then
 fi
 if [ -n "$VM_KEY" ] && [ -f "$UI_ENV" ]; then
     EXISTING=$(grep '^VITE_VM_PRIVKEY=' "$UI_ENV" 2>/dev/null | cut -d= -f2)
-    if [ -z "$EXISTING" ]; then
+    if [ "$EXISTING" != "$VM_KEY" ]; then
         if grep -q '^VITE_VM_PRIVKEY=' "$UI_ENV"; then
             sed -i.bak "s/^VITE_VM_PRIVKEY=.*/VITE_VM_PRIVKEY=$VM_KEY/" "$UI_ENV"
             rm -f "$UI_ENV.bak"
         else
             echo "VITE_VM_PRIVKEY=$VM_KEY" >> "$UI_ENV"
         fi
-        printf '\033[32mInjected VM_PRIVKEY into admin UI .env\033[0m\n'
-    else
-        printf '\033[33mAdmin UI .env already has VITE_VM_PRIVKEY set\033[0m\n'
+        printf '\033[32mSynced VM_PRIVKEY into admin UI .env\033[0m\n'
     fi
 fi
 

@@ -3,6 +3,10 @@
 #MISE quiet=true
 
 if pkill svoted 2>/dev/null; then
+    for i in $(seq 1 20); do
+        pgrep svoted > /dev/null 2>&1 || break
+        sleep 0.25
+    done
     printf '\033[32mStopped svoted\033[0m\n'
 else
     echo "svoted is not running."

@@ -5,8 +5,23 @@ set -e
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 
+write_ios_config() {
+    local cfg="$DIR/zodl-ios/secant/Resources/voting-config-local.json"
+    if [ -d "$DIR/zodl-ios/secant/Resources" ]; then
+        cat > "$cfg" <<'EOFJSON'
+{
+  "version": 1,
+  "vote_servers": [{ "url": "http://localhost:1318", "label": "Localhost" }],
+  "pir_servers": [{ "url": "http://localhost:3000", "label": "Localhost" }]
+}
+EOFJSON
+        printf '\033[32miOS config → zodl-ios/secant/Resources/voting-config-local.json\033[0m\n'
+    fi
+}
+
 if pgrep svoted > /dev/null 2>&1; then
     printf '\033[33mAlready running: svoted\033[0m\n'
+    write_ios_config
     exit 0
 fi
 
@@ -87,14 +102,4 @@ for i in $(seq 1 10); do
 done
 
 # ── Write iOS local config ──────────────────────────────────────
-IOS_CFG="$DIR/zodl-ios/secant/Resources/voting-config-local.json"
-if [ -d "$DIR/zodl-ios/secant/Resources" ]; then
-    cat > "$IOS_CFG" <<'EOF'
-{
-  "version": 1,
-  "vote_servers": [{ "url": "http://localhost:1318", "label": "Localhost" }],
-  "pir_servers": [{ "url": "http://localhost:3000", "label": "Localhost" }]
-}
-EOF
-    printf '\033[32miOS config → zodl-ios/secant/Resources/voting-config-local.json\033[0m\n'
-fi
+write_ios_config

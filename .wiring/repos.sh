@@ -15,4 +15,5 @@ WIRED_LOCKS=(
     "voting-circuits:voting-circuits/Cargo.lock"
     "zcash-swift-wallet-sdk:Cargo.lock"
     "zodl-ios:modules/Package.resolved"
+    "zodl-ios:secant.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 )

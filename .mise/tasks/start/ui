@@ -5,13 +5,15 @@ set -e
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 UI_DIR="$DIR/vote-shielded-vote-generator-ui"
+PID_DIR="$DIR/.pids"
+mkdir -p "$PID_DIR"
 
 if [ ! -d "$UI_DIR" ]; then
     printf '\033[31mError: vote-shielded-vote-generator-ui not cloned.\033[0m\n'
     exit 1
 fi
 
-if pgrep -f 'node.*vote-shielded-vote-generator' > /dev/null 2>&1; then
+if [ -f "$PID_DIR/ui.pid" ] && kill -0 "$(cat "$PID_DIR/ui.pid")" 2>/dev/null; then
     printf '\033[33mAlready running: admin UI\033[0m\n'
     exit 0
 fi
@@ -42,5 +44,7 @@ if [ -n "$VM_KEY" ] && [ -f "$UI_ENV" ]; then
     fi
 fi
 
-(cd "$UI_DIR" && npm install --silent && nohup npm run dev > "$DIR/ui.log" 2>&1 &)
+cd "$UI_DIR" && npm install --silent
+npm run dev > "$DIR/ui.log" 2>&1 &
+echo $! > "$PID_DIR/ui.pid"
 printf '\033[32mStarted admin UI → ui.log (port 5173)\033[0m\n'

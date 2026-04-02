@@ -3,10 +3,12 @@
 #MISE quiet=true
 
 DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+SVOTED_HOME="${SVOTED_HOME:-$DIR/.svoted}"
+PID_DIR="$DIR/.pids"
 
 # ── Chain ─────────────────────────────────────────────────────────
 printf "chain          "
-STATUS=$(svoted status --home ~/.svoted 2>/dev/null) || true
+STATUS=$(svoted status --home "$SVOTED_HOME" 2>/dev/null) || true
 if [ -n "$STATUS" ]; then
     HEIGHT=$(echo "$STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sync_info',{}).get('latest_block_height','?'))" 2>/dev/null || echo "?")
     printf '\033[32m● running\033[0m   block %s\n' "$HEIGHT"
@@ -16,10 +18,12 @@ fi
 
 # ── nf-server ────────────────────────────────────────────────────
 printf "nf-server      "
-if pgrep -f 'nf-server.*serve' > /dev/null 2>&1; then
-    printf '\033[32m● running\033[0m   port 3000\n'
-elif pgrep -f 'cargo.*nf-server' > /dev/null 2>&1; then
-    printf '\033[33m● building\033[0m  (cargo compile in progress)\n'
+if [ -f "$PID_DIR/nf.pid" ] && kill -0 "$(cat "$PID_DIR/nf.pid")" 2>/dev/null; then
+    if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+        printf '\033[32m● running\033[0m   port 3000\n'
+    else
+        printf '\033[33m● starting\033[0m  (not yet responding)\n'
+    fi
 else
     printf '\033[31m○ stopped\033[0m\n'
 fi
@@ -45,7 +49,7 @@ fi
 
 # ── Admin UI ─────────────────────────────────────────────────────
 printf "admin-ui       "
-if pgrep -f 'node.*vote-shielded-vote-generator' > /dev/null 2>&1; then
+if [ -f "$PID_DIR/ui.pid" ] && kill -0 "$(cat "$PID_DIR/ui.pid")" 2>/dev/null; then
     printf '\033[32m● running\033[0m   port 5173\n'
 else
     printf '\033[31m○ stopped\033[0m\n'
@@ -62,7 +66,7 @@ fi
 # ── Paths ─────────────────────────────────────────────────────────
 echo ""
 printf '\033[2m'
-echo "Chain data     ~/.svoted/"
+echo "Chain data     .svoted/"
 echo "Chain log      ./svoted.log"
 echo "Nullifier data vote-nullifier-pir/nullifiers.{bin,checkpoint}"
 echo "PIR data       vote-nullifier-pir/pir-data/"

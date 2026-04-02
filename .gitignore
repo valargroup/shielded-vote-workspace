@@ -9,10 +9,16 @@ zcash-swift-wallet-sdk/
 zebra/
 zodl-ios/
 
+# Chain data (was ~/.svoted, now local for sandboxing)
+.svoted/
+
 # Service logs
 svoted.log
 nf-serve.log
 ui.log
+
+# PID files
+.pids/
 
 # IDE / OS
 .DS_Store

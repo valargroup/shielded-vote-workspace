@@ -2,8 +2,14 @@
 #MISE description="Stop only admin UI (leave svoted + nf-server running)"
 #MISE quiet=true
 
-if pkill -f 'node.*vote-shielded-vote-generator' 2>/dev/null; then
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+PID_FILE="$DIR/.pids/ui.pid"
+
+if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    kill "$(cat "$PID_FILE")" 2>/dev/null
+    rm -f "$PID_FILE"
     printf '\033[32mStopped admin UI\033[0m\n'
 else
+    rm -f "$PID_FILE"
     echo "admin UI is not running."
 fi

@@ -4,22 +4,27 @@
 set -e
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+export SVOTED_HOME="$DIR/.svoted"
 
 write_ios_config() {
     local cfg="$DIR/zodl-ios/secant/Resources/voting-config-local.json"
     if [ -d "$DIR/zodl-ios/secant/Resources" ]; then
-        cat > "$cfg" <<'EOFJSON'
+        local host
+        host="$(scutil --get LocalHostName).local"
+        cat > "$cfg" <<EOFJSON
 {
   "version": 1,
-  "vote_servers": [{ "url": "http://localhost:1318", "label": "Localhost" }],
-  "pir_servers": [{ "url": "http://localhost:3000", "label": "Localhost" }]
+  "vote_servers": [{ "url": "http://${host}:1318", "label": "Local" }],
+  "pir_servers": [{ "url": "http://${host}:3000", "label": "Local" }]
 }
 EOFJSON
-        printf '\033[32miOS config → zodl-ios/secant/Resources/voting-config-local.json\033[0m\n'
+        printf '\033[32miOS config → voting-config-local.json (%s)\033[0m\n' "$host"
     fi
 }
 
-if pgrep svoted > /dev/null 2>&1; then
+PID_DIR="$DIR/.pids"
+mkdir -p "$PID_DIR"
+if [ -f "$PID_DIR/chain.pid" ] && kill -0 "$(cat "$PID_DIR/chain.pid")" 2>/dev/null; then
     printf '\033[33mAlready running: svoted\033[0m\n'
     write_ios_config
     exit 0
@@ -54,13 +59,14 @@ make -C "$DIR/vote-sdk" init
 # ── Start svoted ─────────────────────────────────────────────────
 SVOTE_PIR_URL=${SVOTE_PIR_URL:-http://localhost:3000} \
 SVOTE_LWD_URLS=${SVOTE_LWD_URLS:-https://zec.rocks:443} \
-nohup make -C "$DIR/vote-sdk" start > "$DIR/svoted.log" 2>&1 &
+make -C "$DIR/vote-sdk" start > "$DIR/svoted.log" 2>&1 &
+echo $! > "$PID_DIR/chain.pid"
 printf '\033[32mStarted svoted → svoted.log\033[0m\n'
 
 # ── Wait for chain readiness ────────────────────────────────────
 printf 'Waiting for chain to be ready...'
 for i in $(seq 1 60); do
-    if svoted status --home ~/.svoted 2>/dev/null | grep -q latest_block_height; then
+    if svoted status --home "$SVOTED_HOME" 2>/dev/null | grep -q latest_block_height; then
         printf ' \033[32mready\033[0m\n'
         break
     fi
@@ -89,7 +95,7 @@ printf 'Registering Pallas key...'
 for i in $(seq 1 10); do
     if svoted tx vote register-pallas-key \
         --from validator --chain-id svote-1 --keyring-backend test \
-        --home ~/.svoted -y > /dev/null 2>&1; then
+        --home "$SVOTED_HOME" -y > /dev/null 2>&1; then
         printf ' \033[32m✓\033[0m\n'
         break
     fi

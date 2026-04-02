@@ -2,8 +2,14 @@
 #MISE description="Stop only nf-server (leave svoted + admin UI running)"
 #MISE quiet=true
 
-if pkill -f 'nf-server.*serve' 2>/dev/null || pkill nf-server 2>/dev/null; then
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+PID_FILE="$DIR/.pids/nf.pid"
+
+if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    kill "$(cat "$PID_FILE")" 2>/dev/null
+    rm -f "$PID_FILE"
     printf '\033[32mStopped nf-server\033[0m\n'
 else
+    rm -f "$PID_FILE"
     echo "nf-server is not running."
 fi

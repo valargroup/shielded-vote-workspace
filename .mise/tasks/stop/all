@@ -3,12 +3,19 @@
 #MISE alias="stop"
 #MISE quiet=true
 
-DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+PID_DIR="$DIR/.pids"
 
 KILLED=""
-pkill svoted    2>/dev/null && KILLED="$KILLED svoted"    || true
-pkill nf-server 2>/dev/null && KILLED="$KILLED nf-server" || true
-pkill -f 'node.*vote-shielded-vote-generator' 2>/dev/null && KILLED="$KILLED admin-ui" || true
+for svc in chain nf ui; do
+    PID_FILE="$PID_DIR/$svc.pid"
+    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+        kill "$(cat "$PID_FILE")" 2>/dev/null
+        KILLED="$KILLED $svc"
+    fi
+    rm -f "$PID_FILE"
+done
+
 if [ -n "$KILLED" ]; then
     printf '\033[32mStopped:%s\033[0m\n' "$KILLED"
 else

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Build xcframework for simulator + open Xcode"
+#MISE description="Build xcframework for simulator + device, then open Xcode"
 #MISE quiet=true
 set -e
 
@@ -11,11 +11,20 @@ if [ ! -d "$SDK_DIR/.git" ]; then
     exit 1
 fi
 
+# ── Check wiring mode ─────────────────────────────────────────────
+SDK_WIRED_LOCAL=false
+flags=$(git -C "$SDK_DIR" ls-files -v -- Cargo.toml 2>/dev/null)
+if [[ "$flags" == S* ]]; then
+    SDK_WIRED_LOCAL=true
+fi
+
+if [ "$SDK_WIRED_LOCAL" = false ]; then
+    printf '\033[36mWired remote — SPM will fetch pre-built xcframework.\033[0m\n'
+else
+
 # ── Ensure LocalPackages exists ──────────────────────────────────
 if [ ! -d "$SDK_DIR/LocalPackages" ]; then
     printf '\033[36mInitializing LocalPackages (first time only)...\033[0m\n'
-    # Create the SPM wrapper — rebuild-local-ffi.sh will populate the xcframework
-    # Create both dirs — rebuild-local-ffi.sh guards on xcframework dir existence
     mkdir -p "$SDK_DIR/LocalPackages/libzcashlc.xcframework"
     cat > "$SDK_DIR/LocalPackages/Package.swift" << 'EOF'
 // swift-tools-version:5.6
@@ -36,29 +45,88 @@ let package = Package(
 EOF
 fi
 
-# ── Build Rust for iOS Simulator (skip if up to date) ────────────
-BUILT_LIB="$SDK_DIR/target/aarch64-apple-ios-sim/release/libzcashlc.a"
-XCFW_LIB="$SDK_DIR/LocalPackages/libzcashlc.xcframework/ios-arm64_x86_64-simulator/libzcashlc.framework/libzcashlc"
-
-needs_build=true
-if [ -f "$XCFW_LIB" ] && [ -f "$BUILT_LIB" ]; then
-    # Skip if xcframework copy is newer than (or same as) the cargo output
-    if [ ! "$BUILT_LIB" -nt "$XCFW_LIB" ]; then
-        # Also check if any Rust source is newer than the built lib
-        newer_src=$(find "$SDK_DIR/rust/src" "$DIR/librustvoting" "$DIR/librustzcash" "$DIR/voting-circuits" \
-            -name '*.rs' -newer "$BUILT_LIB" 2>/dev/null | head -1)
-        if [ -z "$newer_src" ]; then
-            needs_build=false
-        fi
+# ── Build Rust for iOS Simulator + Device ────────────────────────
+check_needs_build() {
+    local built_lib="$1"
+    local xcfw_lib="$2"
+    if [ ! -f "$xcfw_lib" ] || [ ! -f "$built_lib" ]; then
+        return 0  # needs build
     fi
+    if [ "$built_lib" -nt "$xcfw_lib" ]; then
+        return 0  # cargo output is newer
+    fi
+    # Check if any Rust source is newer than the xcframework (the last artifact produced).
+    # We compare against xcfw_lib, not built_lib, because proto files get regenerated
+    # by build.rs during each cargo invocation — comparing against the .a would always
+    # trigger a rebuild since the device build regenerates protos after the sim .a exists.
+    local newer_src
+    newer_src=$(find "$SDK_DIR/rust/src" "$DIR/librustvoting" "$DIR/librustzcash" "$DIR/voting-circuits" \
+        -name '*.rs' -newer "$xcfw_lib" 2>/dev/null | head -1)
+    if [ -n "$newer_src" ]; then
+        return 0  # source changed
+    fi
+    return 1  # up to date
+}
+
+SIM_BUILT="$SDK_DIR/target/aarch64-apple-ios-sim/release/libzcashlc.a"
+SIM_XCFW="$SDK_DIR/LocalPackages/libzcashlc.xcframework/ios-arm64-simulator/libzcashlc.framework/libzcashlc"
+DEV_BUILT="$SDK_DIR/target/aarch64-apple-ios/release/libzcashlc.a"
+DEV_XCFW="$SDK_DIR/LocalPackages/libzcashlc.xcframework/ios-arm64/libzcashlc.framework/libzcashlc"
+
+sim_needs_build=false
+dev_needs_build=false
+
+if check_needs_build "$SIM_BUILT" "$SIM_XCFW"; then
+    sim_needs_build=true
+    printf '\033[36mBuilding Rust FFI for iOS Simulator...\033[0m\n'
+    (cd "$SDK_DIR" && cargo build --target aarch64-apple-ios-sim --release)
+else
+    printf '\033[32mSimulator lib is up to date.\033[0m\n'
 fi
 
-if [ "$needs_build" = true ]; then
-    printf '\033[36mBuilding Rust FFI for iOS Simulator...\033[0m\n'
-    "$SDK_DIR/Scripts/rebuild-local-ffi.sh" ios-sim
+if check_needs_build "$DEV_BUILT" "$DEV_XCFW"; then
+    dev_needs_build=true
+    printf '\033[36mBuilding Rust FFI for iOS Device...\033[0m\n'
+    (cd "$SDK_DIR" && cargo build --target aarch64-apple-ios --release)
 else
-    printf '\033[32mxcframework is up to date, skipping Rust build.\033[0m\n'
+    printf '\033[32mDevice lib is up to date.\033[0m\n'
 fi
+
+# Rebuild combined xcframework if either slice changed
+if [ "$sim_needs_build" = true ] || [ "$dev_needs_build" = true ]; then
+    printf '\033[36mAssembling combined xcframework...\033[0m\n'
+    XCFW="$SDK_DIR/LocalPackages/libzcashlc.xcframework"
+    HEADERS="$SDK_DIR/target/Headers"
+
+    # Wrap each .a into a framework with headers + modulemap
+    make_framework() {
+        local fw_dir="$1" lib="$2"
+        rm -rf "$fw_dir"
+        mkdir -p "$fw_dir/Modules" "$fw_dir/Headers"
+        cp "$lib" "$fw_dir/libzcashlc"
+        cp "$SDK_DIR/BuildSupport/module.modulemap" "$fw_dir/Modules/"
+        cp "$SDK_DIR/BuildSupport/platform-Info.plist" "$fw_dir/Info.plist"
+        [ -d "$HEADERS" ] && cp -R "$HEADERS/"* "$fw_dir/Headers/"
+    }
+
+    SIM_FW=$(mktemp -d)/libzcashlc.framework
+    DEV_FW=$(mktemp -d)/libzcashlc.framework
+    make_framework "$SIM_FW" "$SIM_BUILT"
+    make_framework "$DEV_FW" "$DEV_BUILT"
+
+    rm -rf "$XCFW"
+    xcodebuild -create-xcframework \
+        -framework "$SIM_FW" \
+        -framework "$DEV_FW" \
+        -output "$XCFW"
+
+    rm -rf "$(dirname "$SIM_FW")" "$(dirname "$DEV_FW")"
+    printf '\033[32mCombined xcframework ready (simulator + device).\033[0m\n'
+else
+    printf '\033[32mxcframework is up to date.\033[0m\n'
+fi
+
+fi # SDK_WIRED_LOCAL
 
 # ── Open Xcode ──────────────────────────────────────────────────
 PROJECT="$DIR/zodl-ios/secant.xcodeproj"
@@ -66,7 +134,7 @@ if [ -d "$PROJECT" ]; then
     printf '\033[32mOpening zodl-ios in Xcode...\033[0m\n'
     open "$PROJECT"
     echo ""
-    echo "Xcode is ready. Use Cmd+R to build and run on the simulator."
+    echo "Xcode is ready. Use Cmd+R to build and run on simulator or device."
     echo "After Rust changes, re-run: mise run start:ios"
 else
     printf '\033[33mzodl-ios project not found. Opening SDK instead.\033[0m\n'

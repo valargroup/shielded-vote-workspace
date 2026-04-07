@@ -9,6 +9,7 @@ zcash-swift-wallet-sdk/
 zebra/
 shielded-vote-book/
 zodl-ios/
+BigDecimal/
 
 # Chain data (was ~/.svoted, now local for sandboxing)
 .svoted/

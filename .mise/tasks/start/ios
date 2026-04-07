@@ -79,7 +79,7 @@ dev_needs_build=false
 if check_needs_build "$SIM_BUILT" "$SIM_XCFW"; then
     sim_needs_build=true
     printf '\033[36mBuilding Rust FFI for iOS Simulator...\033[0m\n'
-    (cd "$SDK_DIR" && cargo build --target aarch64-apple-ios-sim --release)
+    (cd "$SDK_DIR" && cargo build --locked --target aarch64-apple-ios-sim --release)
 else
     printf '\033[32mSimulator lib is up to date.\033[0m\n'
 fi
@@ -87,7 +87,7 @@ fi
 if check_needs_build "$DEV_BUILT" "$DEV_XCFW"; then
     dev_needs_build=true
     printf '\033[36mBuilding Rust FFI for iOS Device...\033[0m\n'
-    (cd "$SDK_DIR" && cargo build --target aarch64-apple-ios --release)
+    (cd "$SDK_DIR" && cargo build --locked --target aarch64-apple-ios --release)
 else
     printf '\033[32mDevice lib is up to date.\033[0m\n'
 fi

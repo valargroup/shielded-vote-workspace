@@ -1,5 +1,5 @@
 diff --git a/modules/Package.swift b/modules/Package.swift
-index f4321916..78302131 100644
+index d5adc114..78302131 100644
 --- a/modules/Package.swift
 +++ b/modules/Package.swift
 @@ -105,12 +105,12 @@ let package = Package(
@@ -9,8 +9,7 @@ index f4321916..78302131 100644
 -        .package(url: "https://github.com/valargroup/zcash-swift-wallet-sdk.git", branch: "denver-demo"),
 +        .package(name: "zcash-swift-wallet-sdk", path: "../../zcash-swift-wallet-sdk"),
          .package(path: "../vendor/flexa-ios"),
--        .package(url: "https://github.com/pacu/zcash-swift-payment-uri", from: "1.0.1"),
-+        .package(path: "../vendor/zcash-swift-payment-uri"),
+         .package(path: "../vendor/zcash-swift-payment-uri"),
          .package(url: "https://github.com/airbnb/lottie-spm.git", from: "4.5.2"),
          .package(url: "https://github.com/KeystoneHQ/keystone-sdk-ios/", from: "0.0.1"),
 -        .package(url: "https://github.com/valargroup/BigDecimal.git", branch: "fix/uncomment-platforms"),

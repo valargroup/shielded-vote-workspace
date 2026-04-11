@@ -1,12 +1,12 @@
 diff --git a/voting-circuits/Cargo.toml b/voting-circuits/Cargo.toml
-index e3f217a..341583f 100644
+index 0e3aea4..341583f 100644
 --- a/voting-circuits/Cargo.toml
 +++ b/voting-circuits/Cargo.toml
 @@ -19,7 +19,7 @@ lazy_static = "1"
  sinsemilla = "0.1"
  
  [dev-dependencies]
--imt-tree = { git = "https://github.com/valargroup/vote-nullifier-pir.git", branch = "main" }
+-imt-tree = "0.1"
 +imt-tree = { path = "../../vote-nullifier-pir/imt-tree" }
  criterion = "0.4"
  rand = "0.8"

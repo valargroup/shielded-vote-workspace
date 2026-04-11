@@ -1,8 +1,8 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 86786c64..86019168 100644
+index 97c7c920..86019168 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -9,17 +9,17 @@ resolver = "2"
+@@ -9,18 +9,17 @@ resolver = "2"
  # All crate patches live here (workspace-level).
  # Individual member Cargo.tomls use crates-io version strings;
  # Cargo resolves them from these overrides.
@@ -13,6 +13,7 @@ index 86786c64..86019168 100644
 -#
 -# librustzcash crates: pczt + zcash_keys + zcash_primitives + zcash_protocol
 -#   need our governance visibility changes (pub getters on PCZT types, etc.).
+-#   Pinned by rev to shielded-voting-wallet-support HEAD (6858db4).
 +# Local overrides: sibling repos are available as relative paths.
  [patch.crates-io]
 -orchard = { git = "https://github.com/valargroup/voting-circuits.git" }
@@ -22,10 +23,10 @@ index 86786c64..86019168 100644
 +zcash_primitives = { path = "../librustzcash/zcash_primitives" }
 +zcash_protocol   = { path = "../librustzcash/components/zcash_protocol" }
  
--pczt              = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
--zcash_keys        = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
--zcash_primitives  = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
--zcash_protocol    = { git = "https://github.com/valargroup/librustzcash.git", branch = "valargroup/pczt-governance-extensions-0.11" }
+-pczt                = { git = "https://github.com/valargroup/librustzcash.git", rev = "6858db4a523de05f7474a89c7df751510c71874d" }
+-zcash_keys          = { git = "https://github.com/valargroup/librustzcash.git", rev = "6858db4a523de05f7474a89c7df751510c71874d" }
+-zcash_primitives    = { git = "https://github.com/valargroup/librustzcash.git", rev = "6858db4a523de05f7474a89c7df751510c71874d" }
+-zcash_protocol      = { git = "https://github.com/valargroup/librustzcash.git", rev = "6858db4a523de05f7474a89c7df751510c71874d" }
 +[patch."https://github.com/valargroup/vote-nullifier-pir.git"]
 +imt-tree   = { path = "../vote-nullifier-pir/imt-tree" }
 +pir-client = { path = "../vote-nullifier-pir/pir/client" }

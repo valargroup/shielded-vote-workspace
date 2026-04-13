@@ -40,14 +40,21 @@ for entry in "${WIRED[@]}"; do
         continue
     fi
 
-    # Temporarily clear skip-worktree so git diff sees the changes
-    git -C "$repo_dir" update-index --no-skip-worktree "$file" 2>/dev/null || true
+    # Check if skip-worktree was set before we clear it
+    flags=$(git -C "$repo_dir" ls-files -v -- "$file" 2>/dev/null)
+    was_skipped=false
+    if [[ "$flags" == S* ]]; then
+        was_skipped=true
+        git -C "$repo_dir" update-index --no-skip-worktree "$file" 2>/dev/null || true
+    fi
 
     # Capture the diff
     diff_output=$(git -C "$repo_dir" diff -- "$file" 2>/dev/null || true)
 
-    # Restore skip-worktree
-    git -C "$repo_dir" update-index --skip-worktree "$file" 2>/dev/null || true
+    # Restore skip-worktree only if it was set before
+    if [ "$was_skipped" = true ]; then
+        git -C "$repo_dir" update-index --skip-worktree "$file" 2>/dev/null || true
+    fi
 
     if [ -n "$diff_output" ]; then
         echo "$diff_output" > "$patch"

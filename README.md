@@ -10,8 +10,7 @@ Development workspace for Zcash shielded governance voting. Coordinates cross-re
 | `zcash_voting`                    | Voting protocol: hotkeys, ZKPs, encryption, PCZT construction    | `main`                             |
 | `voting-circuits`                 | Halo2 circuits for delegation proofs                             | `main`                             |
 | `vote-nullifier-pir`              | PIR-private nullifier exclusion                                  | `main`                             |
-| `vote-sdk`                        | Voting chain daemon + helper server                              | `main`                             |
-| `vote-shielded-vote-generator-ui` | Admin UI for round/proposal management                           | `main`                             |
+| `vote-sdk`                        | Voting chain daemon + helper server + admin UI                   | `main`                             |
 | `zcash-swift-wallet-sdk`          | Swift SDK with voting FFI (fork of zcash/zcash-swift-wallet-sdk) | `shielded-vote`                    |
 | `zodl-ios`                        | iOS wallet app (fork of zodl-inc/zodl-ios)                       | `shielded-vote`                    |
 
@@ -39,8 +38,7 @@ mise run stop             # kill everything
 
 1. **Nullifier pipeline** — bootstrap data from remote (~7.4 GB one-time download), ingest to chain tip, export PIR tier files, start PIR server (port 3000)
 2. **Chain** — build vote-sdk with FFI, init single-validator chain, start daemon, wait for readiness, register Pallas key
-3. **iOS config** — writes `zodl-ios/secant/Resources/voting-config-local.json` pointing at localhost
-4. **Admin UI** — starts Vite dev server (port 5173)
+3. **Admin UI** — starts Vite dev server (port 5173)
 
 To start just the chain without nullifiers: `mise run start:chain`
 
@@ -63,7 +61,7 @@ This builds the Rust FFI as a local xcframework (arm64 simulator only — fast i
 
 After Rust code changes, re-run `mise run start:ios` to rebuild the xcframework, then Cmd+R again in Xcode. Swift-only changes just need Cmd+R.
 
-The local voting config (`voting-config-local.json`) is created automatically by `start:chain`.
+The iOS app fetches its voting service config from the [GitHub Pages CDN](https://valargroup.github.io/token-holder-voting-config/) at startup (defaults to staging environment).
 
 ## Tasks
 
@@ -113,8 +111,7 @@ zodl-ios (Swift/TCA)
             │    └─ voting-circuits ← Halo2 proof circuits
             └─ vote-nullifier-pir  ← PIR nullifier exclusion
 
-vote-sdk (Go/Cosmos)         ← chain daemon + helper server
-vote-shielded-vote-generator-ui  ← admin UI (Vite/React)
+vote-sdk (Go/Cosmos)         ← chain daemon + helper server + admin UI
 ```
 
 See [UPSTREAM-SUMMARY.md](UPSTREAM-SUMMARY.md) for detailed per-repo change descriptions.

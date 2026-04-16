@@ -94,7 +94,6 @@ Tests: ~715 lines covering delegation flow, Keystone pipeline, 6 crash recovery 
 | [vote-sdk](https://github.com/valargroup/vote-sdk)                                               | Cosmos SDK application chain — delegation TX processing, vote commitment verification, tally |
 | [voting-circuits](https://github.com/valargroup/voting-circuits)                                 | Halo2 circuits for delegation and vote proofs (orchard fork)                                 |
 | [vote-nullifier-pir](https://github.com/valargroup/vote-nullifier-pir)                           | PIR server for nullifier non-membership proofs                                               |
-| [vote-shielded-vote-generator-ui](https://github.com/valargroup/vote-shielded-vote-generator-ui) | Admin UI for voting round/proposal management                                                |
 
 ## Merge order
 

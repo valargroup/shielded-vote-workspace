@@ -1,0 +1,19 @@
+{
+  "git.scanRepositories": [
+    "librustvoting",
+    "librustzcash",
+    "shielded-vote-book",
+    "vote-nullifier-pir",
+    "vote-sdk",
+    "voting-circuits",
+    "zcash-swift-wallet-sdk",
+    "zodl-ios"
+  ],
+  "scm.repositories.visible": 15,
+  "scm.defaultViewMode": "tree",
+  "gitlens.advanced.repositorySearchDepth": 1,
+  "rust-analyzer.linkedProjects": [
+    "librustvoting/Cargo.toml",
+    "zcash-swift-wallet-sdk/Cargo.toml"
+  ]
+}

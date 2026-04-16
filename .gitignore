@@ -3,7 +3,6 @@ zcash_voting/
 librustzcash/
 vote-nullifier-pir/
 vote-sdk/
-vote-shielded-vote-generator-ui/
 voting-circuits/
 zcash-swift-wallet-sdk/
 zebra/

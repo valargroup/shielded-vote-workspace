@@ -1,0 +1,27 @@
+{
+  "folders": [
+    { "path": "." },
+    { "path": "librustzcash" },
+    { "path": "librustvoting" },
+    { "path": "vote-sdk" },
+    { "path": "vote-nullifier-pir" },
+    { "path": "voting-circuits" },
+    { "path": "zcash-swift-wallet-sdk" },
+    { "path": "zodl-ios" },
+    { "path": "shielded-vote-book" }
+  ],
+  "settings": {
+    "git.autoRepositoryDetection": "subFolders",
+    "git.scanRepositories": [
+      "librustzcash",
+      "librustvoting",
+      "vote-sdk",
+      "vote-nullifier-pir",
+      "voting-circuits",
+      "zcash-swift-wallet-sdk",
+      "zodl-ios",
+      "shielded-vote-book"
+    ],
+    "gitlens.advanced.repositorySearchDepth": 1
+  }
+}

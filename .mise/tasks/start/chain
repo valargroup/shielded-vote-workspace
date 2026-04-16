@@ -7,27 +7,10 @@ DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 export SVOTED_HOME="$DIR/.svoted"
 export PATH="$HOME/go/bin:$PATH"
 
-write_ios_config() {
-    local cfg="$DIR/zodl-ios/secant/Resources/voting-config-local.json"
-    if [ -d "$DIR/zodl-ios/secant/Resources" ]; then
-        local host
-        host="$(scutil --get LocalHostName).local"
-        cat > "$cfg" <<EOFJSON
-{
-  "version": 1,
-  "vote_servers": [{ "url": "http://${host}:1318", "label": "Local" }],
-  "pir_servers": [{ "url": "http://${host}:3000", "label": "Local" }]
-}
-EOFJSON
-        printf '\033[32miOS config → voting-config-local.json (%s)\033[0m\n' "$host"
-    fi
-}
-
 PID_DIR="$DIR/.pids"
 mkdir -p "$PID_DIR"
 if [ -f "$PID_DIR/chain.pid" ] && kill -0 "$(cat "$PID_DIR/chain.pid")" 2>/dev/null; then
     printf '\033[33mAlready running: svoted\033[0m\n'
-    write_ios_config
     exit 0
 fi
 
@@ -108,5 +91,3 @@ for i in $(seq 1 10); do
     sleep 2
 done
 
-# ── Write iOS local config ──────────────────────────────────────
-write_ios_config

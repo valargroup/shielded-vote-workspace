@@ -4,12 +4,12 @@
 set -e
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
-UI_DIR="$DIR/vote-shielded-vote-generator-ui"
+UI_DIR="$DIR/vote-sdk/ui"
 PID_DIR="$DIR/.pids"
 mkdir -p "$PID_DIR"
 
 if [ ! -d "$UI_DIR" ]; then
-    printf '\033[31mError: vote-shielded-vote-generator-ui not cloned.\033[0m\n'
+    printf '\033[31mError: vote-sdk/ui not found.\033[0m\n'
     exit 1
 fi
 

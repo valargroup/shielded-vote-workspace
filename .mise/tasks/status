@@ -55,14 +55,6 @@ else
     printf '\033[31m○ stopped\033[0m\n'
 fi
 
-# ── iOS config ───────────────────────────────────────────────────
-printf "ios-config     "
-if [ -f "$DIR/zodl-ios/secant/Resources/voting-config-local.json" ]; then
-    printf '\033[32m✓ present\033[0m\n'
-else
-    printf '\033[90m○ not set\033[0m  (created by start:chain)\n'
-fi
-
 # ── Paths ─────────────────────────────────────────────────────────
 echo ""
 printf '\033[2m'
@@ -72,7 +64,7 @@ echo "Nullifier data vote-nullifier-pir/nullifiers.{bin,checkpoint}"
 echo "PIR data       vote-nullifier-pir/pir-data/"
 echo "nf-server log  ./nf-serve.log"
 echo "Admin UI log   ./ui.log"
-echo "Admin UI       vote-shielded-vote-generator-ui/"
+echo "Admin UI       vote-sdk/ui/"
 echo ""
 echo "Tail all logs: mise run logs"
 printf '\033[0m'

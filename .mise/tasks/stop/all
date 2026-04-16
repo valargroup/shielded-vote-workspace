@@ -21,4 +21,3 @@ if [ -n "$KILLED" ]; then
 else
     echo "No running processes found."
 fi
-rm -f "$DIR/zodl-ios/secant/Resources/voting-config-local.json"

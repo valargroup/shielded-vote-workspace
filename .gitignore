@@ -9,6 +9,8 @@ zebra/
 shielded-vote-book/
 zodl-ios/
 keystone3-firmware/
+token-holder-voting-config/
+vote-infrastructure/
 
 # Chain data (was ~/.svoted, now local for sandboxing)
 .svoted/

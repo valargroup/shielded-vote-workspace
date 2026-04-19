@@ -1,5 +1,5 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 2c60d1f7..b2b057cc 100644
+index e379677a..61632d1f 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -78,8 +78,9 @@ rust_decimal = { version = "1", default-features = false, features = ["c-repr"]
@@ -9,7 +9,7 @@ index 2c60d1f7..b2b057cc 100644
 -zcash_voting = { git = "https://github.com/valargroup/zcash_voting.git", rev = "126c11d354c28de257d75558f0d88bcee0f2e0d0" }
 -voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git" }
 +# Local overrides: use sibling repo paths.
-+zcash_voting = { path = "../zcash_voting/zcash_voting" }
++zcash_voting = { path = "../librustvoting/zcash_voting" }
 +voting-circuits = { path = "../voting-circuits/voting-circuits" }
  zcash_keys = { version = "0.12", features = ["orchard"] }
  incrementalmerkletree = { version = "0.8", default-features = false }
@@ -36,7 +36,7 @@ index 2c60d1f7..b2b057cc 100644
 -zcash_client_sqlite  = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
 -zcash_client_backend = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
 -zcash_primitives  = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
-+orchard            = { path = "../voting-circuits/orchard" }
++orchard            = { path = "../voting-circuits/orchard", package = "valar-orchard" }
 +pczt               = { path = "../librustzcash/pczt" }
 +zcash_keys         = { path = "../librustzcash/zcash_keys" }
 +zcash_protocol     = { path = "../librustzcash/components/zcash_protocol" }

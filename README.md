@@ -61,7 +61,7 @@ This builds the Rust FFI as a local xcframework (arm64 simulator only — fast i
 
 After Rust code changes, re-run `mise run start:ios` to rebuild the xcframework, then Cmd+R again in Xcode. Swift-only changes just need Cmd+R.
 
-The iOS app fetches its voting service config from the [GitHub Pages CDN](https://valargroup.github.io/token-holder-voting-config/) at startup (defaults to staging environment).
+The iOS app fetches its voting service config from the [GitHub Pages CDN](https://valargroup.github.io/token-holder-voting-config/) at startup.
 
 ## Tasks
 

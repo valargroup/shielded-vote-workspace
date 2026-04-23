@@ -4,11 +4,15 @@
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 PID_FILE="$DIR/.pids/nf.pid"
+PORT=3000
 
-if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-    kill "$(cat "$PID_FILE")" 2>/dev/null
+# Find whatever is actually bound to the port — survives stale PID files.
+LISTENING_PID=$(lsof -tnP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
+
+if [ -n "$LISTENING_PID" ]; then
+    kill "$LISTENING_PID" 2>/dev/null || true
     rm -f "$PID_FILE"
-    printf '\033[32mStopped nf-server\033[0m\n'
+    printf '\033[32mStopped nf-server (pid %s)\033[0m\n' "$LISTENING_PID"
 else
     rm -f "$PID_FILE"
     echo "nf-server is not running."

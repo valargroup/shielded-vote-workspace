@@ -5,16 +5,50 @@ set -e
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 PID_DIR="$DIR/.pids"
+PID_FILE="$PID_DIR/nf.pid"
+PORT=3000
 mkdir -p "$PID_DIR"
 
-if [ -f "$PID_DIR/nf.pid" ] && kill -0 "$(cat "$PID_DIR/nf.pid")" 2>/dev/null; then
-    printf '\033[33mAlready running: nf-server\033[0m\n'
-    exit 0
+# Truth source is the port, not the PID file — survive orphaned processes
+# from previous runs and writes the actual nf-server PID (not make's).
+LISTENING_PID=$(lsof -tnP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
+
+if [ -n "$LISTENING_PID" ]; then
+    if curl -sf "http://localhost:$PORT/health" > /dev/null 2>&1; then
+        echo "$LISTENING_PID" > "$PID_FILE"
+        printf '\033[33mAlready running: nf-server (pid %s)\033[0m\n' "$LISTENING_PID"
+        exit 0
+    fi
+    printf '\033[31mPort %s held by pid %s but /health not responding.\033[0m\n' "$PORT" "$LISTENING_PID"
+    printf 'Investigate or kill it manually: kill %s\n' "$LISTENING_PID"
+    exit 1
 fi
+
+# Stale tracking — clean up before we start fresh.
+rm -f "$PID_FILE"
 
 make -C "$DIR/vote-nullifier-pir" bootstrap
 make -C "$DIR/vote-nullifier-pir" ingest
 make -C "$DIR/vote-nullifier-pir" export-nf
 make -C "$DIR/vote-nullifier-pir" serve > "$DIR/nf-serve.log" 2>&1 &
-echo $! > "$PID_DIR/nf.pid"
-printf '\033[32mStarted nf-server → nf-serve.log\033[0m\n'
+MAKE_PID=$!
+
+printf 'Waiting for nf-server to bind :%s...' "$PORT"
+for i in $(seq 1 30); do
+    SERVER_PID=$(lsof -tnP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
+    if [ -n "$SERVER_PID" ] && curl -sf "http://localhost:$PORT/health" > /dev/null 2>&1; then
+        echo "$SERVER_PID" > "$PID_FILE"
+        printf ' \033[32mready (pid %s)\033[0m → nf-serve.log\n' "$SERVER_PID"
+        exit 0
+    fi
+    if ! kill -0 "$MAKE_PID" 2>/dev/null; then
+        printf ' \033[31mmake exited before bind\033[0m\n'
+        tail -20 "$DIR/nf-serve.log"
+        exit 1
+    fi
+    printf '.'
+    sleep 1
+done
+printf ' \033[31mTIMEOUT\033[0m\n'
+tail -20 "$DIR/nf-serve.log"
+exit 1

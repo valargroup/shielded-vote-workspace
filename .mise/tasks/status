@@ -17,13 +17,13 @@ else
 fi
 
 # ── nf-server ────────────────────────────────────────────────────
+# Port is the truth source; PID file is just a hint that may be stale.
 printf "nf-server      "
-if [ -f "$PID_DIR/nf.pid" ] && kill -0 "$(cat "$PID_DIR/nf.pid")" 2>/dev/null; then
-    if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
-        printf '\033[32m● running\033[0m   port 3000\n'
-    else
-        printf '\033[33m● starting\033[0m  (not yet responding)\n'
-    fi
+if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+    NF_PID=$(lsof -tnP -iTCP:3000 -sTCP:LISTEN 2>/dev/null | head -1 || echo "?")
+    printf '\033[32m● running\033[0m   port 3000 (pid %s)\n' "$NF_PID"
+elif [ -f "$PID_DIR/nf.pid" ] && kill -0 "$(cat "$PID_DIR/nf.pid")" 2>/dev/null; then
+    printf '\033[33m● starting\033[0m  pid %s, not yet responding\n' "$(cat "$PID_DIR/nf.pid")"
 else
     printf '\033[31m○ stopped\033[0m\n'
 fi

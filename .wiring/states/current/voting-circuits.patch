@@ -1,5 +1,5 @@
 diff --git a/voting-circuits/Cargo.toml b/voting-circuits/Cargo.toml
-index 717f653..c831bdd 100644
+index 4911f72..71de4ac 100644
 --- a/voting-circuits/Cargo.toml
 +++ b/voting-circuits/Cargo.toml
 @@ -22,7 +22,7 @@ lazy_static = "1"

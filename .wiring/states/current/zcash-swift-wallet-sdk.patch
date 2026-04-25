@@ -1,7 +1,18 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 81430028..af4c71ce 100644
+index 81430028..2ddace16 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
+@@ -15,8 +15,8 @@ build = "rust/build.rs"
+ [dependencies]
+ 
+ # Zcash
+-orchard = "0.12"
+-sapling = { package = "sapling-crypto", version = "0.6", default-features = false }
++orchard = { version = "0.12.0", package = "valar-orchard" }
++sapling = { package = "sapling-crypto", version = "0.6.2", default-features = false }
+ transparent = { package = "zcash_transparent", version = "0.6", default-features = false }
+ zcash_address = { version = "0.10" }
+ zcash_client_backend = { version = "0.21", features = [
 @@ -80,8 +80,9 @@ rust_decimal = { version = "1", default-features = false, features = ["c-repr"]
  # - The "static" feature is required for the "compression" default feature of arti-client.
  xz2 = { version = "0.1", features = ["static"] }
@@ -14,7 +25,7 @@ index 81430028..af4c71ce 100644
  zcash_keys = { version = "0.12", features = ["orchard"] }
  incrementalmerkletree = { version = "0.8", default-features = false }
  
-@@ -98,15 +99,20 @@ crate-type = ["staticlib"]
+@@ -98,15 +99,33 @@ crate-type = ["staticlib"]
  [profile.release]
  lto = true
  
@@ -22,9 +33,7 @@ index 81430028..af4c71ce 100644
  [patch.crates-io]
 -pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
 -orchard = { package = "orchard", git = "https://github.com/zcash/orchard.git", rev = "6b12c77260aa7fac0d804983fc31b71b584d48e0" }
-+pczt = { path = "../librustzcash/pczt" }
-+orchard = { path = "../voting-circuits/orchard", package = "valar-orchard" }
- sapling = { package = "sapling-crypto", git = "https://github.com/zcash/sapling-crypto.git", rev = "4f95c2286dbe90f05e6f44d634bc2924b992fab4" }
+-sapling = { package = "sapling-crypto", git = "https://github.com/zcash/sapling-crypto.git", rev = "4f95c2286dbe90f05e6f44d634bc2924b992fab4" }
 -transparent = { package = "zcash_transparent", git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
 -zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
 -zcash_client_backend = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
@@ -33,7 +42,10 @@ index 81430028..af4c71ce 100644
 -zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
 -zcash_proofs = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
 -zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
-+transparent = { path = "../librustzcash/zcash_transparent" }
++pczt = { path = "../librustzcash/pczt" }
++valar-orchard = { path = "../voting-circuits/orchard" }
++voting-circuits = { path = "../voting-circuits/voting-circuits" }
++zcash_transparent = { path = "../librustzcash/zcash_transparent" }
 +zcash_address = { path = "../librustzcash/components/zcash_address" }
 +zcash_encoding = { path = "../librustzcash/components/zcash_encoding" }
 +zcash_client_backend = { path = "../librustzcash/zcash_client_backend" }
@@ -41,6 +53,19 @@ index 81430028..af4c71ce 100644
 +zcash_keys = { path = "../librustzcash/zcash_keys" }
 +zcash_primitives = { path = "../librustzcash/zcash_primitives" }
 +zcash_proofs = { path = "../librustzcash/zcash_proofs" }
++zcash_protocol = { path = "../librustzcash/components/zcash_protocol" }
++# Mirror librustzcash's own sapling-crypto patch. Required because Cargo
++# only honours `[patch]` in the root workspace, so librustzcash's workspace
++# patch is ignored when it is consumed via path. Without this, sapling-crypto
++# resolves to crates.io 0.6.2 (where `pczt::Bundle::extract` consumes `self`),
++# and librustzcash's `tx_extractor` — which calls `extract` on `&Bundle` —
++# fails to compile.
++sapling = { package = "sapling-crypto", git = "https://github.com/zcash/sapling-crypto.git", rev = "b8a81c22f034d68f9bbd6cba728aab807b9ba2ea" }
++
++[patch."https://github.com/valargroup/librustzcash"]
++pczt = { path = "../librustzcash/pczt" }
++zcash_keys = { path = "../librustzcash/zcash_keys" }
++zcash_primitives = { path = "../librustzcash/zcash_primitives" }
 +zcash_protocol = { path = "../librustzcash/components/zcash_protocol" }
 +
 +[patch."https://github.com/valargroup/voting-circuits.git"]

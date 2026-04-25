@@ -1,51 +1,47 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index e379677a..db67f1ba 100644
+index 81430028..af4c71ce 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -78,8 +78,9 @@ rust_decimal = { version = "1", default-features = false, features = ["c-repr"]
+@@ -80,8 +80,9 @@ rust_decimal = { version = "1", default-features = false, features = ["c-repr"]
+ # - The "static" feature is required for the "compression" default feature of arti-client.
  xz2 = { version = "0.1", features = ["static"] }
  
- # Voting
--zcash_voting = { git = "https://github.com/valargroup/zcash_voting.git", rev = "126c11d354c28de257d75558f0d88bcee0f2e0d0" }
--voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git" }
-+# Local overrides: use sibling repo paths.
+-# Voting
+-zcash_voting = { git = "https://github.com/valargroup/zcash_voting.git", branch = "greg/orchard-0.12" }
++# Voting — local sibling paths (shielded-vote-workspace)
 +zcash_voting = { path = "../zcash_voting/zcash_voting" }
 +voting-circuits = { path = "../voting-circuits/voting-circuits" }
  zcash_keys = { version = "0.12", features = ["orchard"] }
  incrementalmerkletree = { version = "0.8", default-features = false }
  
-@@ -96,20 +97,18 @@ crate-type = ["staticlib"]
+@@ -98,15 +99,20 @@ crate-type = ["staticlib"]
  [profile.release]
  lto = true
  
--# Patches to align zcash_voting's dependencies with the SDK's.
--# orchard: voting-circuits fork (upstream 0.11 + pub visibility for
--#   constants/spec + shared_primitives gadget for voting ZKPs).
--# librustzcash crates: governance extensions branch with PCZT/key
--#   visibility changes needed for voting delegation flows.
 +# Local overrides: sibling repos as relative paths.
  [patch.crates-io]
--orchard = { git = "https://github.com/valargroup/voting-circuits.git" }
--# librustzcash crates pinned by rev to shielded-voting-wallet-support HEAD (7c8c8b0).
--pczt              = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_keys        = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_protocol    = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_address     = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_encoding    = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_transparent = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_client_sqlite  = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_client_backend = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
--zcash_primitives  = { git = "https://github.com/valargroup/librustzcash.git", rev = "7c8c8b0e0ce6769a4b58ea96d97fb78b9d98e1fc" }
-+orchard            = { path = "../voting-circuits/orchard", package = "valar-orchard" }
-+pczt               = { path = "../librustzcash/pczt" }
-+zcash_keys         = { path = "../librustzcash/zcash_keys" }
-+zcash_protocol     = { path = "../librustzcash/components/zcash_protocol" }
-+zcash_address      = { path = "../librustzcash/components/zcash_address" }
-+zcash_encoding     = { path = "../librustzcash/components/zcash_encoding" }
-+zcash_transparent  = { path = "../librustzcash/zcash_transparent" }
-+zcash_client_sqlite  = { path = "../librustzcash/zcash_client_sqlite" }
+-pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-orchard = { package = "orchard", git = "https://github.com/zcash/orchard.git", rev = "6b12c77260aa7fac0d804983fc31b71b584d48e0" }
++pczt = { path = "../librustzcash/pczt" }
++orchard = { path = "../voting-circuits/orchard", package = "valar-orchard" }
+ sapling = { package = "sapling-crypto", git = "https://github.com/zcash/sapling-crypto.git", rev = "4f95c2286dbe90f05e6f44d634bc2924b992fab4" }
+-transparent = { package = "zcash_transparent", git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-zcash_client_backend = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-zcash_client_sqlite = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-zcash_proofs = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
+-zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "438657c52c7b5abd933c715e83f0289a79349c5a" }
++transparent = { path = "../librustzcash/zcash_transparent" }
++zcash_address = { path = "../librustzcash/components/zcash_address" }
++zcash_encoding = { path = "../librustzcash/components/zcash_encoding" }
 +zcash_client_backend = { path = "../librustzcash/zcash_client_backend" }
-+zcash_primitives   = { path = "../librustzcash/zcash_primitives" }
++zcash_client_sqlite = { path = "../librustzcash/zcash_client_sqlite" }
++zcash_keys = { path = "../librustzcash/zcash_keys" }
++zcash_primitives = { path = "../librustzcash/zcash_primitives" }
++zcash_proofs = { path = "../librustzcash/zcash_proofs" }
++zcash_protocol = { path = "../librustzcash/components/zcash_protocol" }
 +
 +[patch."https://github.com/valargroup/voting-circuits.git"]
 +voting-circuits = { path = "../voting-circuits/voting-circuits" }

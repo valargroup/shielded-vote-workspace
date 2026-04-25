@@ -1,16 +1,15 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 7fdb691b..6bbddb29 100644
+index 71283602..9d6bc972 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -5,3 +5,16 @@ members = [
-     "vote-commitment-tree-client",
- ]
- resolver = "2"
+@@ -14,3 +14,15 @@ resolver = "2"
+ # crates) that are incompatible at the type level.
+ [patch.crates-io]
+ sapling = { package = "sapling-crypto", git = "https://github.com/zcash/sapling-crypto.git", rev = "b8a81c22f034d68f9bbd6cba728aab807b9ba2ea" }
 +
 +# Local overrides: sibling repos as relative paths.
 +# valar-pczt is published from valargroup/librustzcash adam/crates-io-hygiene;
 +# the local librustzcash main has it as `pczt`, so we rename via `package`.
-+[patch.crates-io]
 +valar-orchard    = { path = "../voting-circuits/orchard" }
 +voting-circuits  = { path = "../voting-circuits/voting-circuits" }
 +imt-tree         = { path = "../vote-nullifier-pir/imt-tree" }

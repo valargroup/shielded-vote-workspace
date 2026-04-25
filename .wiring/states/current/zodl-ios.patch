@@ -1,89 +1,31 @@
-diff --git a/modules/Package.swift b/modules/Package.swift
-index 52955918..1e7d27f3 100644
---- a/modules/Package.swift
-+++ b/modules/Package.swift
-@@ -107,7 +107,7 @@ let package = Package(
-         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "1.7.2"),
-         .package(url: "https://github.com/pointfreeco/swift-url-routing", from: "0.6.2"),
-         .package(url: "https://github.com/zcash-hackworks/MnemonicSwift", from: "2.2.5"),
--        .package(url: "https://github.com/valargroup/zcash-swift-wallet-sdk.git", branch: "shielded-vote"),
-+        .package(name: "zcash-swift-wallet-sdk", path: "../../zcash-swift-wallet-sdk"),
-         .package(url: "https://github.com/flexa/flexa-ios.git", exact: "1.1.4"),
-         .package(url: "https://github.com/pacu/zcash-swift-payment-uri", from: "1.0.1"),
-         .package(url: "https://github.com/airbnb/lottie-spm.git", from: "4.5.2"),
 diff --git a/secant.xcodeproj/project.pbxproj b/secant.xcodeproj/project.pbxproj
-index ab6a83b9..d164d384 100644
+index 948bc32b..41f1e935 100644
 --- a/secant.xcodeproj/project.pbxproj
 +++ b/secant.xcodeproj/project.pbxproj
-@@ -2255,7 +2255,7 @@
+@@ -9172,7 +9172,7 @@
  				);
- 				MARKETING_VERSION = 3.3.0;
+ 				MARKETING_VERSION = 3.4.0;
  				OTHER_SWIFT_FLAGS = "";
 -				PRODUCT_BUNDLE_IDENTIFIER = "co.electriccoin.secant-testnet";
 +				PRODUCT_BUNDLE_IDENTIFIER = "co.valargroup.secant-mainnet";
  				PRODUCT_NAME = "$(TARGET_NAME)";
  				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG UNREDACTED SECANT_MAINNET";
  				SWIFT_VERSION = 5.0;
-@@ -2285,7 +2285,7 @@
+@@ -9202,7 +9202,7 @@
  				);
- 				MARKETING_VERSION = 3.3.0;
+ 				MARKETING_VERSION = 3.4.0;
  				OTHER_SWIFT_FLAGS = "";
 -				PRODUCT_BUNDLE_IDENTIFIER = "co.electriccoin.secant-testnet";
 +				PRODUCT_BUNDLE_IDENTIFIER = "co.valargroup.secant-mainnet";
  				PRODUCT_NAME = "$(TARGET_NAME)";
  				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SECANT_MAINNET;
  				SWIFT_VERSION = 5.0;
-@@ -2315,7 +2315,7 @@
+@@ -9232,7 +9232,7 @@
  				);
- 				MARKETING_VERSION = 3.3.0;
+ 				MARKETING_VERSION = 3.4.0;
  				OTHER_SWIFT_FLAGS = "";
 -				PRODUCT_BUNDLE_IDENTIFIER = "co.electriccoin.secant-testnet";
 +				PRODUCT_BUNDLE_IDENTIFIER = "co.valargroup.secant-mainnet";
  				PRODUCT_NAME = "$(TARGET_NAME)";
  				SWIFT_ACTIVE_COMPILATION_CONDITIONS = SECANT_MAINNET;
  				SWIFT_VERSION = 5.0;
-diff --git a/zashi-internal-Info.plist b/zashi-internal-Info.plist
-index 764d7a86..ea625bf3 100644
---- a/zashi-internal-Info.plist
-+++ b/zashi-internal-Info.plist
-@@ -9,11 +9,6 @@
- 	</array>
- 	<key>CFBundleDevelopmentRegion</key>
- 	<string>$(DEVELOPMENT_LANGUAGE)</string>
--	<key>CFBundleLocalizations</key>
--	<array>
--		<string>en</string>
--		<string>es</string>
--	</array>
- 	<key>CFBundleDisplayName</key>
- 	<string>Zodl Internal</string>
- 	<key>CFBundleExecutable</key>
-@@ -22,6 +17,11 @@
- 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
- 	<key>CFBundleInfoDictionaryVersion</key>
- 	<string>6.0</string>
-+	<key>CFBundleLocalizations</key>
-+	<array>
-+		<string>en</string>
-+		<string>es</string>
-+	</array>
- 	<key>CFBundleName</key>
- 	<string>$(PRODUCT_NAME)</string>
- 	<key>CFBundlePackageType</key>
-@@ -73,6 +73,8 @@
- 		<string>fetch</string>
- 		<string>processing</string>
- 	</array>
-+	<key>UIDesignRequiresCompatibility</key>
-+	<false/>
- 	<key>UILaunchScreen</key>
- 	<dict/>
- 	<key>UILaunchStoryboardName</key>
-@@ -85,7 +87,5 @@
- 	<array>
- 		<string>UIInterfaceOrientationPortrait</string>
- 	</array>
--	<key>UIDesignRequiresCompatibility</key>
--	<false/>
- </dict>
- </plist>

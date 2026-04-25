@@ -11,6 +11,8 @@ zodl-ios/
 keystone3-firmware/
 token-holder-voting-config/
 vote-infrastructure/
+ypir/
+spiral-rs/
 
 # Chain data (was ~/.svoted, now local for sandboxing)
 .svoted/
@@ -26,6 +28,9 @@ ui.log
 # IDE / OS
 .DS_Store
 *.swp
+
+# Local env (secrets, machine-specific)
+.env
 
 # Wiring: active state is per-checkout, not committed
 .wiring/current-state

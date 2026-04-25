@@ -1,0 +1,6 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "voting-circuits/orchard/Cargo.toml",
+    "voting-circuits/voting-circuits/Cargo.toml"
+  ]
+}

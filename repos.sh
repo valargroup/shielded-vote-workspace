@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Workspace manifest. Single source of truth for:
 #   - child-repo clone URLs (REPOS)
-#   - named states — branch combinations that cycle as releases ship (STATES)
+#   - named states — each state is a full branch + wiring patch set (STATES)
 #   - per-state branches and wired files (BRANCHES_*, WIRED_*, WIRED_LOCKS_*)
 #
-# Active state lives in .wiring/current-state (defaults to STATES[0] if absent).
+# Active state lives in .wiring/current-state (defaults to STATES[0] if absent
+# or if the file names a state that no longer exists).
 # Switch with: mise run wire:state <name>
 # Apply local overrides with: mise run wire:local
 
@@ -21,70 +22,44 @@ REPOS=(
     "shielded-vote-book|https://github.com/valargroup/shielded-vote-book"
     "token-holder-voting-config|https://github.com/valargroup/token-holder-voting-config.git"
     "vote-infrastructure|https://github.com/valargroup/vote-infrastructure.git"
+    "ypir|git@github.com:valargroup/ypir.git"
+    "spiral-rs|git@github.com:valargroup/spiral-rs.git"
 )
 
 # ─── States ──────────────────────────────────────────────
-# Ordered. First entry is the default when .wiring/current-state is missing.
-# Labels are intentionally relative — when `next` ships, rename it to `current`
-# and start a new `next` with fresh branches.
-STATES=("current" "next")
+# Ordered. First entry is the default when .wiring/current-state is missing
+# or invalid.
+STATES=("current")
 
 # ─── current: deployed zodl (pre-orchard-0.12) ───────────
 BRANCHES_current=(
     "zcash_voting:main"
-    "librustzcash:shielded-voting-wallet-support"
+    "librustzcash:shielded-vote-for-zodl-3.4.0"
     "vote-nullifier-pir:main"
     "vote-sdk:main"
     "voting-circuits:main"
-    "zcash-swift-wallet-sdk:shielded-vote"
-    "zodl-ios:shielded-vote"
+    "zcash-swift-wallet-sdk:shielded-vote-2.4.10"
+    "zodl-ios:shielded-vote-3.4.0"
     "shielded-vote-book:main"
     "token-holder-voting-config:main"
     "vote-infrastructure:main"
+    "ypir:valar/artifact"
+    "spiral-rs:valar/avoid-avx512"
 )
 WIRED_current=(
     "zcash_voting:Cargo.toml"
     "voting-circuits:voting-circuits/Cargo.toml"
     "vote-sdk:circuits/Cargo.toml"
     "zcash-swift-wallet-sdk:Cargo.toml"
-    "zodl-ios:modules/Package.swift"
     "zodl-ios:secant.xcodeproj/project.pbxproj"
-    "zodl-ios:zashi-internal-Info.plist"
+    "vote-nullifier-pir:Cargo.toml"
 )
 WIRED_LOCKS_current=(
     "zcash_voting:Cargo.lock"
     "voting-circuits:voting-circuits/Cargo.lock"
     "zcash-swift-wallet-sdk:Cargo.lock"
-    "zodl-ios:modules/Package.resolved"
     "zodl-ios:secant.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
-)
-
-# ─── next: orchard-0.12 + zodl 3.4.0 release ─────────────
-# zodl-ios on shielded-vote-3.4.0 declares zcash-swift-wallet-sdk as an
-# XCLocalSwiftPackageReference directly in the pbxproj, so no Package.swift
-# swap is needed for this state.
-BRANCHES_next=(
-    "zcash_voting:greg/orchard-0.12"
-    "librustzcash:shielded-vote-for-zodl-3.4.0"
-    "vote-nullifier-pir:main"
-    "vote-sdk:greg/orchard-0.12"
-    "voting-circuits:greg/orchard-0.12"
-    "zcash-swift-wallet-sdk:shielded-vote-2.4.10"
-    "zodl-ios:shielded-vote-3.4.0"
-    "shielded-vote-book:main"
-    "token-holder-voting-config:main"
-    "vote-infrastructure:main"
-)
-WIRED_next=(
-    "zcash_voting:Cargo.toml"
-    "voting-circuits:voting-circuits/Cargo.toml"
-    "vote-sdk:circuits/Cargo.toml"
-    "zcash-swift-wallet-sdk:Cargo.toml"
-)
-WIRED_LOCKS_next=(
-    "zcash_voting:Cargo.lock"
-    "voting-circuits:voting-circuits/Cargo.lock"
-    "zcash-swift-wallet-sdk:Cargo.lock"
+    "vote-nullifier-pir:Cargo.lock"
 )
 
 # ─── Helpers ─────────────────────────────────────────────
@@ -112,11 +87,15 @@ wiring_load_state() {
 wiring_active_state() {
     # $1 = workspace root (defaults to $DIR if set)
     local root="${1:-${DIR:-.}}"
+    local s
     if [ -f "$root/.wiring/current-state" ]; then
-        cat "$root/.wiring/current-state"
-    else
-        printf '%s' "${STATES[0]}"
+        s="$(tr -d '\n' <"$root/.wiring/current-state")"
+        if wiring_state_exists "$s"; then
+            printf '%s' "$s"
+            return 0
+        fi
     fi
+    printf '%s' "${STATES[0]}"
 }
 
 wiring_state_exists() {

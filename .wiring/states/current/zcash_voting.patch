@@ -1,20 +1,14 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 71283602..9d6bc972 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -14,3 +14,15 @@ resolver = "2"
- # crates) that are incompatible at the type level.
+@@ -17,8 +17,8 @@
+ # - `pczt` / `zcash_*` / `transparent`: pin to the upstream zcash/librustzcash
+ #   `main` HEAD now that all governance PRs (#2283, #2284, #2281) are merged
+ #   upstream — the valargroup/librustzcash fork is fully retired.
  [patch.crates-io]
- sapling = { package = "sapling-crypto", git = "https://github.com/zcash/sapling-crypto.git", rev = "b8a81c22f034d68f9bbd6cba728aab807b9ba2ea" }
-+
-+# Local overrides: sibling repos as relative paths.
-+# valar-pczt is published from valargroup/librustzcash adam/crates-io-hygiene;
-+# the local librustzcash main has it as `pczt`, so we rename via `package`.
-+valar-orchard    = { path = "../voting-circuits/orchard" }
-+voting-circuits  = { path = "../voting-circuits/voting-circuits" }
-+imt-tree         = { path = "../vote-nullifier-pir/imt-tree" }
-+pir-client       = { path = "../vote-nullifier-pir/pir/client" }
-+valar-pczt       = { path = "../librustzcash/pczt", package = "pczt" }
-+zcash_keys       = { path = "../librustzcash/zcash_keys" }
-+zcash_primitives = { path = "../librustzcash/zcash_primitives" }
-+zcash_protocol   = { path = "../librustzcash/components/zcash_protocol" }
+ orchard = { git = "https://github.com/zcash/orchard.git", rev = "2d88d48d1d86a1b49c3cee00d67dbbfd57f89d0d" }
+-voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", rev = "70497dab0b3c676f5e9fbe4407d14b21e898eaad" }
++voting-circuits = { path = "../voting-circuits/voting-circuits" }
+ pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+ zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+ zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }

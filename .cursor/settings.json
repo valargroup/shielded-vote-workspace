@@ -1,6 +1,13 @@
 {
   "rust-analyzer.linkedProjects": [
-    "voting-circuits/orchard/Cargo.toml",
-    "voting-circuits/voting-circuits/Cargo.toml"
+    "orchard/Cargo.toml",
+    "voting-circuits/voting-circuits/Cargo.toml",
+    "zcash_voting/zcash_voting/Cargo.toml",
+    "librustzcash/Cargo.toml",
+    "vote-nullifier-pir/Cargo.toml",
+    "ypir/Cargo.toml",
+    "vote-sdk/circuits/Cargo.toml",
+    "vote-sdk/e2e-tests/Cargo.toml",
+    "zcash-swift-wallet-sdk/Cargo.toml"
   ]
 }

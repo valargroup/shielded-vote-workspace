@@ -13,7 +13,8 @@
 # Format: dir|clone_url. Branch comes from the active state's BRANCHES_* array.
 REPOS=(
     "zcash_voting|git@github.com:valargroup/zcash_voting.git"
-    "librustzcash|git@github.com:valargroup/librustzcash.git"
+    "librustzcash|https://github.com/zcash/librustzcash.git"
+    "orchard|https://github.com/zcash/orchard.git"
     "vote-nullifier-pir|https://github.com/valargroup/vote-nullifier-pir.git"
     "vote-sdk|https://github.com/valargroup/vote-sdk"
     "voting-circuits|https://github.com/valargroup/voting-circuits.git"
@@ -31,10 +32,11 @@ REPOS=(
 # or invalid.
 STATES=("current")
 
-# ─── current: deployed zodl (pre-orchard-0.12) ───────────
+# ─── current: orchard 0.13
 BRANCHES_current=(
     "zcash_voting:main"
-    "librustzcash:shielded-vote-for-zodl-3.4.0"
+    "librustzcash:main"
+    "orchard:main"
     "vote-nullifier-pir:main"
     "vote-sdk:main"
     "voting-circuits:main"
@@ -50,12 +52,15 @@ WIRED_current=(
     "zcash_voting:Cargo.toml"
     "voting-circuits:voting-circuits/Cargo.toml"
     "vote-sdk:circuits/Cargo.toml"
+    "vote-sdk:e2e-tests/Cargo.toml"
     "zcash-swift-wallet-sdk:Cargo.toml"
     "zodl-ios:secant.xcodeproj/project.pbxproj"
     "vote-nullifier-pir:Cargo.toml"
 )
 WIRED_LOCKS_current=(
     "zcash_voting:Cargo.lock"
+    "vote-sdk:circuits/Cargo.lock"
+    "vote-sdk:e2e-tests/Cargo.lock"
     "voting-circuits:voting-circuits/Cargo.lock"
     "zcash-swift-wallet-sdk:Cargo.lock"
     "zodl-ios:secant.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"

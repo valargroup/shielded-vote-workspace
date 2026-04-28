@@ -17,3 +17,56 @@ diff --git a/circuits/Cargo.toml b/circuits/Cargo.toml
  incrementalmerkletree = "0.8"
  hex = "0.4"
  halo2_gadgets = "0.4"
+@@ -38,6 +38,6 @@ serde_json = "1"
+ # all converge on a single set of source revisions. Mirrors the patches in
+ # `zcash_voting/Cargo.toml` and `e2e-tests/Cargo.toml`.
+ [patch.crates-io]
+-orchard = { git = "https://github.com/valargroup/orchard.git", branch = "valar/0.13-spend-auth-g" }
+-voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", branch = "valar/orchard-0.13" }
+-vote-commitment-tree = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
++orchard = { path = "../../orchard" }
++voting-circuits = { path = "../../voting-circuits/voting-circuits" }
++vote-commitment-tree = { path = "../../zcash_voting/vote-commitment-tree" }
+diff --git a/e2e-tests/Cargo.toml b/e2e-tests/Cargo.toml
+index a0c73b92..5ba8c83d 100644
+--- a/e2e-tests/Cargo.toml
++++ b/e2e-tests/Cargo.toml
+@@ -51,22 +51,22 @@ incrementalmerkletree = "0.8"
+ rand = "0.8"
+ rand_chacha = "0.3"
+ 
+-# Migration-branch git pins. orchard/voting-circuits go to the valargroup
+-# migration branches; vote-commitment-tree* and zcash_voting come from the
+-# matching valargroup/zcash_voting branch; librustzcash crates pin to upstream
+-# zcash/main HEAD now that all governance PRs are merged.
++# Local-path overrides applied by `mise run wire:local`. Mirrors the patches in
++# `circuits/Cargo.toml`, `zcash_voting/Cargo.toml`, and
++# `zcash-swift-wallet-sdk/Cargo.toml` so the whole workspace converges on a
++# single set of source trees during cross-repo development.
+ [patch.crates-io]
+-orchard = { git = "https://github.com/valargroup/orchard.git", branch = "valar/0.13-spend-auth-g" }
+-voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", branch = "valar/orchard-0.13" }
+-vote-commitment-tree = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
+-vote-commitment-tree-client = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
+-zcash_voting = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
+-pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_transparent = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
++orchard = { path = "../../orchard" }
++voting-circuits = { path = "../../voting-circuits/voting-circuits" }
++vote-commitment-tree = { path = "../../zcash_voting/vote-commitment-tree" }
++vote-commitment-tree-client = { path = "../../zcash_voting/vote-commitment-tree-client" }
++zcash_voting = { path = "../../zcash_voting/zcash_voting" }
++pczt = { path = "../../librustzcash/pczt" }
++zcash_address = { path = "../../librustzcash/components/zcash_address" }
++zcash_encoding = { path = "../../librustzcash/components/zcash_encoding" }
++zcash_keys = { path = "../../librustzcash/zcash_keys" }
++zcash_primitives = { path = "../../librustzcash/zcash_primitives" }
++zcash_protocol = { path = "../../librustzcash/components/zcash_protocol" }
++zcash_transparent = { path = "../../librustzcash/zcash_transparent" }
+ 
+ [workspace]

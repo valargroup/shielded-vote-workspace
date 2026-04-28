@@ -1,14 +1,28 @@
 diff --git a/Cargo.toml b/Cargo.toml
+index b0dd2125..d37a8ef7 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -17,8 +17,8 @@
- # - `pczt` / `zcash_*` / `transparent`: pin to the upstream zcash/librustzcash
+@@ -21,12 +21,14 @@ resolver = "2"
  #   `main` HEAD now that all governance PRs (#2283, #2284, #2281) are merged
  #   upstream — the valargroup/librustzcash fork is fully retired.
  [patch.crates-io]
- orchard = { git = "https://github.com/zcash/orchard.git", rev = "2d88d48d1d86a1b49c3cee00d67dbbfd57f89d0d" }
--voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", rev = "70497dab0b3c676f5e9fbe4407d14b21e898eaad" }
+-orchard = { git = "https://github.com/valargroup/orchard.git", branch = "valar/0.13-spend-auth-g" }
+-voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", branch = "valar/orchard-0.13" }
+-pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-transparent = { package = "zcash_transparent", git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
++orchard = { git = "https://github.com/zcash/orchard.git", branch = "main" }
 +voting-circuits = { path = "../voting-circuits/voting-circuits" }
- pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
- zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
- zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
++imt-tree = { path = "../vote-nullifier-pir/imt-tree" }
++pir-client = { path = "../vote-nullifier-pir/pir/client" }
++pczt = { path = "../librustzcash/pczt" }
++zcash_address = { path = "../librustzcash/components/zcash_address" }
++zcash_encoding = { path = "../librustzcash/components/zcash_encoding" }
++zcash_keys = { path = "../librustzcash/zcash_keys" }
++zcash_primitives = { path = "../librustzcash/zcash_primitives" }
++zcash_protocol = { path = "../librustzcash/components/zcash_protocol" }
++transparent = { package = "zcash_transparent", path = "../librustzcash/zcash_transparent" }

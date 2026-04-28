@@ -13,7 +13,15 @@
   "scm.defaultViewMode": "tree",
   "gitlens.advanced.repositorySearchDepth": 1,
   "rust-analyzer.linkedProjects": [
+    "orchard/Cargo.toml",
+    "voting-circuits/voting-circuits/Cargo.toml",
+    "zcash_voting/zcash_voting/Cargo.toml",
+    "librustzcash/Cargo.toml",
     "librustvoting/Cargo.toml",
+    "vote-nullifier-pir/Cargo.toml",
+    "ypir/Cargo.toml",
+    "vote-sdk/circuits/Cargo.toml",
+    "vote-sdk/e2e-tests/Cargo.toml",
     "zcash-swift-wallet-sdk/Cargo.toml"
   ]
 }

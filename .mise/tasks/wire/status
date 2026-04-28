@@ -23,7 +23,7 @@ for entry in "${BRANCHES[@]+"${BRANCHES[@]}"}"; do
     want="${entry#*:}"
     repo_dir="$DIR/$repo"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         printf '  \033[31m○\033[0m %-35s \033[31mnot cloned\033[0m (want %s)\n' "$repo" "$want"
         ((drift++)) || true
         continue
@@ -51,7 +51,7 @@ for entry in "${WIRED[@]+"${WIRED[@]}"}"; do
     file="${entry#*:}"
     repo_dir="$DIR/$repo"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         printf '  \033[31m○\033[0m %-40s \033[31mnot a git repo\033[0m\n' "$repo/$file"
         ((missing++)) || true
         continue

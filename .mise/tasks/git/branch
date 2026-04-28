@@ -35,7 +35,7 @@ fi
 created=0
 for target in "${targets[@]}"; do
     repo_dir="$DIR/$target"
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         printf '  \033[33m⊘\033[0m %-35s not cloned\n' "$target"
         continue
     fi

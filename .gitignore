@@ -1,6 +1,7 @@
 # Child repos — each is a standalone clone, not managed by the umbrella.
 zcash_voting/
 librustzcash/
+orchard/
 vote-nullifier-pir/
 vote-sdk/
 voting-circuits/
@@ -13,6 +14,8 @@ token-holder-voting-config/
 vote-infrastructure/
 ypir/
 spiral-rs/
+cosmos-sdk-v0.53.5/
+cosmos-sdk-v0.53.5-fast-path/
 
 # Chain data (was ~/.svoted, now local for sandboxing)
 .svoted/

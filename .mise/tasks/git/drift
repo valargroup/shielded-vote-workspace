@@ -16,14 +16,16 @@ for entry in "${REPOS[@]}"; do
     branch="$(wiring_branch_for_repo "$dir" 2>/dev/null || echo "main")"
     repo_dir="$DIR/$dir"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         printf '  \033[31m○\033[0m \033[1m%-35s\033[0m not cloned\n' "$dir"
         continue
     fi
 
     current=$(git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
 
-    # Fetch quietly
+    # Fetch quietly. Some local worktrees have narrow refspecs, so fetch the
+    # state branch explicitly before the generic origin fetch.
+    git -C "$repo_dir" fetch --quiet origin "refs/heads/$branch:refs/remotes/origin/$branch" 2>/dev/null || true
     git -C "$repo_dir" fetch --quiet origin 2>/dev/null || true
 
     # Check ahead/behind vs origin

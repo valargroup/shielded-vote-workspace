@@ -6,7 +6,7 @@ set -e
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 SDK_DIR="$DIR/zcash-swift-wallet-sdk"
 
-if [ ! -d "$SDK_DIR/.git" ]; then
+if [ ! -e "$SDK_DIR/.git" ] || ! git -C "$SDK_DIR" rev-parse --git-dir >/dev/null 2>&1; then
     printf '\033[31mError: zcash-swift-wallet-sdk not cloned. Run: mise run git:sync\033[0m\n'
     exit 1
 fi

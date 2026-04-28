@@ -15,7 +15,7 @@ for entry in "${WIRED[@]+"${WIRED[@]}"}"; do
     repo="${entry%%:*}"
     file="${entry#*:}"
     repo_dir="$DIR/$repo"
-    if [ -d "$repo_dir/.git" ]; then
+    if wiring_repo_exists "$repo_dir"; then
         flags=$(git -C "$repo_dir" ls-files -v -- "$file" 2>/dev/null)
         if [[ "$flags" == S* ]]; then
             wired_repos+=("$repo")
@@ -38,7 +38,7 @@ for entry in "${REPOS[@]}"; do
     IFS='|' read -r dir url <<< "$entry"
     repo_dir="$DIR/$dir"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         continue
     fi
 

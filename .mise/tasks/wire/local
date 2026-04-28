@@ -30,7 +30,7 @@ for repo in "${repos_seen[@]+"${repos_seen[@]}"}"; do
     repo_dir="$DIR/$repo"
     patch="$STATE_DIR/$repo.patch"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         printf '\033[33mSkip %s — not a git repo\033[0m\n' "$repo"
         ((skipped++)) || true
         continue
@@ -92,7 +92,7 @@ for entry in "${WIRED_LOCKS[@]+"${WIRED_LOCKS[@]}"}"; do
     repo="${entry%%:*}"
     file="${entry#*:}"
     repo_dir="$DIR/$repo"
-    if [ -d "$repo_dir/.git" ]; then
+    if wiring_repo_exists "$repo_dir"; then
         git -C "$repo_dir" update-index --skip-worktree "$file" 2>/dev/null || true
     fi
 done

@@ -18,7 +18,7 @@ for entry in "${WIRED[@]+"${WIRED[@]}"}" "${WIRED_LOCKS[@]+"${WIRED_LOCKS[@]}"}"
     file="${entry#*:}"
     repo_dir="$DIR/$repo"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         continue
     fi
 
@@ -41,7 +41,7 @@ for repo in "${repos_seen[@]+"${repos_seen[@]}"}"; do
     repo_dir="$DIR/$repo"
     patch="$STATE_DIR/$repo.patch"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         continue
     fi
 
@@ -67,7 +67,7 @@ for entry in "${WIRED_LOCKS[@]+"${WIRED_LOCKS[@]}"}"; do
     file="${entry#*:}"
     repo_dir="$DIR/$repo"
 
-    if [ ! -d "$repo_dir/.git" ]; then
+    if ! wiring_repo_exists "$repo_dir"; then
         continue
     fi
 

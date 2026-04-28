@@ -1,14 +1,51 @@
+diff --git a/go.mod b/go.mod
+--- a/go.mod
++++ b/go.mod
+@@ -28,6 +28,8 @@ require (
+ 	modernc.org/sqlite v1.37.1
+ )
+ 
++require github.com/bits-and-blooms/bitset v1.24.3 // indirect
++
+ require (
+ 	cosmossdk.io/collections v1.3.1 // indirect
+ 	cosmossdk.io/schema v1.1.0 // indirect
+@@ -38,7 +40,6 @@ require (
+ 	github.com/DataDog/zstd v1.5.7 // indirect
+ 	github.com/beorn7/perks v1.0.1 // indirect
+ 	github.com/bgentry/speakeasy v0.2.0 // indirect
+-	github.com/bits-and-blooms/bitset v1.24.3 // indirect
+ 	github.com/btcsuite/btcd v0.21.0-beta.0.20201114000516-e9c7a5ac6401 // indirect
+ 	github.com/bwesterb/go-ristretto v1.2.3 // indirect
+ 	github.com/bytedance/gopkg v0.1.3 // indirect
+@@ -187,3 +188,5 @@ replace (
+ 	// replace broken goleveldb
+ 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+ )
++
++replace github.com/cosmos/cosmos-sdk => ../cosmos-sdk-v0.53.5-fast-path
+diff --git a/go.sum b/go.sum
+--- a/go.sum
++++ b/go.sum
+@@ -171,8 +171,6 @@ github.com/cosmos/cosmos-db v1.1.3 h1:7QNT77+vkefostcKkhrzDK9uoIEryzFrU9eoMeaQOP
+ github.com/cosmos/cosmos-db v1.1.3/go.mod h1:kN+wGsnwUJZYn8Sy5Q2O0vCYA99MJllkKASbs6Unb9U=
+ github.com/cosmos/cosmos-proto v1.0.0-beta.5 h1:eNcayDLpip+zVLRLYafhzLvQlSmyab+RC5W7ZfmxJLA=
+ github.com/cosmos/cosmos-proto v1.0.0-beta.5/go.mod h1:hQGLpiIUloJBMdQMMWb/4wRApmI9hjHH05nefC0Ojec=
+-github.com/cosmos/cosmos-sdk v0.53.5 h1:JPue+SFn2gyDzTV9TYb8mGpuIH3kGt7WbGadulkpTcU=
+-github.com/cosmos/cosmos-sdk v0.53.5/go.mod h1:AQJx0jpon70WAD4oOs/y+SlST4u7VIwEPR6F8S7JMdo=
+ github.com/cosmos/go-bip39 v1.0.0 h1:pcomnQdrdH22njcAatO0yWojsUnCO3y2tNoV1cb6hHY=
+ github.com/cosmos/go-bip39 v1.0.0/go.mod h1:RNJv0H/pOIVgxw6KS7QeX2a0Uo0aKUlfhZ4xuwvCdJw=
+ github.com/cosmos/gogogateway v1.2.0 h1:Ae/OivNhp8DqBi/sh2A8a1D0y638GpL3tkmLQAiKxTE=
 diff --git a/circuits/Cargo.toml b/circuits/Cargo.toml
 --- a/circuits/Cargo.toml
 +++ b/circuits/Cargo.toml
-@@ -13,10 +13,10 @@
- pasta_curves = "0.5"
+@@ -13,10 +13,10 @@ pasta_curves = "0.5"
  group = "0.13"
  rand_core = { version = "0.6", features = ["getrandom"] }
  reddsa = { version = "0.5", default-features = false }
--vote-commitment-tree = "0.1.0"
--orchard = { version = "0.13", features = ["unstable-voting-circuits"] }
--voting-circuits = { version = "0.3.0", features = ["share-reveal"] }
+-vote-commitment-tree = "0.1.1"
+-orchard = { version = "=0.13.1", features = ["unstable-voting-circuits"] }
+-voting-circuits = { version = "0.3.1", features = ["share-reveal"] }
 -imt-tree = { git = "https://github.com/valargroup/vote-nullifier-pir.git" }
 +vote-commitment-tree = { path = "../../zcash_voting/vote-commitment-tree" }
 +orchard = { path = "../../voting-circuits/orchard" }
@@ -17,56 +54,23 @@ diff --git a/circuits/Cargo.toml b/circuits/Cargo.toml
  incrementalmerkletree = "0.8"
  hex = "0.4"
  halo2_gadgets = "0.4"
-@@ -38,6 +38,6 @@ serde_json = "1"
- # all converge on a single set of source revisions. Mirrors the patches in
- # `zcash_voting/Cargo.toml` and `e2e-tests/Cargo.toml`.
- [patch.crates-io]
--orchard = { git = "https://github.com/valargroup/orchard.git", branch = "valar/0.13-spend-auth-g" }
--voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", branch = "valar/orchard-0.13" }
--vote-commitment-tree = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
-+orchard = { path = "../../orchard" }
-+voting-circuits = { path = "../../voting-circuits/voting-circuits" }
-+vote-commitment-tree = { path = "../../zcash_voting/vote-commitment-tree" }
 diff --git a/e2e-tests/Cargo.toml b/e2e-tests/Cargo.toml
-index a0c73b92..5ba8c83d 100644
 --- a/e2e-tests/Cargo.toml
 +++ b/e2e-tests/Cargo.toml
-@@ -51,22 +51,22 @@ incrementalmerkletree = "0.8"
- rand = "0.8"
- rand_chacha = "0.3"
+@@ -8,11 +8,11 @@ description = "Rust E2E API tests for Shielded-Vote voting flow (replaces TypeSc
+ # Same-repo path dep (circuits/ is a sibling directory)
+ shielded-vote-circuits = { path = "../circuits" }
  
--# Migration-branch git pins. orchard/voting-circuits go to the valargroup
--# migration branches; vote-commitment-tree* and zcash_voting come from the
--# matching valargroup/zcash_voting branch; librustzcash crates pin to upstream
--# zcash/main HEAD now that all governance PRs are merged.
-+# Local-path overrides applied by `mise run wire:local`. Mirrors the patches in
-+# `circuits/Cargo.toml`, `zcash_voting/Cargo.toml`, and
-+# `zcash-swift-wallet-sdk/Cargo.toml` so the whole workspace converges on a
-+# single set of source trees during cross-repo development.
- [patch.crates-io]
--orchard = { git = "https://github.com/valargroup/orchard.git", branch = "valar/0.13-spend-auth-g" }
--voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", branch = "valar/orchard-0.13" }
--vote-commitment-tree = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
--vote-commitment-tree-client = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
--zcash_voting = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
--pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_transparent = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+-orchard = { version = "=0.13.1", features = ["unstable-voting-circuits"] }
+-voting-circuits = { version = "0.3.1", features = ["share-reveal"] }
+-vote-commitment-tree = "0.1.1"
+-vote-commitment-tree-client = "0.1.1"
+-zcash_voting = "0.1.1"
 +orchard = { path = "../../orchard" }
 +voting-circuits = { path = "../../voting-circuits/voting-circuits" }
 +vote-commitment-tree = { path = "../../zcash_voting/vote-commitment-tree" }
 +vote-commitment-tree-client = { path = "../../zcash_voting/vote-commitment-tree-client" }
 +zcash_voting = { path = "../../zcash_voting/zcash_voting" }
-+pczt = { path = "../../librustzcash/pczt" }
-+zcash_address = { path = "../../librustzcash/components/zcash_address" }
-+zcash_encoding = { path = "../../librustzcash/components/zcash_encoding" }
-+zcash_keys = { path = "../../librustzcash/zcash_keys" }
-+zcash_primitives = { path = "../../librustzcash/zcash_primitives" }
-+zcash_protocol = { path = "../../librustzcash/components/zcash_protocol" }
-+zcash_transparent = { path = "../../librustzcash/zcash_transparent" }
  
- [workspace]
+ # HTTP and JSON
+ reqwest = { version = "0.12", features = ["blocking", "json"] }

@@ -16,10 +16,11 @@ manual=()
 for entry in "${REPOS[@]}"; do
     IFS='|' read -r dir url <<< "$entry"
     repo_dir="$DIR/$dir"
+    branch="$(wiring_branch_for_repo "$dir" 2>/dev/null || true)"
 
     # Initial clone uses the active state's branch for this repo.
-    if [ ! -d "$repo_dir/.git" ]; then
-        if branch="$(wiring_branch_for_repo "$dir")"; then
+    if ! wiring_repo_exists "$repo_dir"; then
+        if [ -n "$branch" ]; then
             printf '  \033[32m↓\033[0m \033[1m%-35s\033[0m cloning → %s\n' "$dir" "$branch"
             git clone --quiet -b "$branch" "$url" "$repo_dir"
         else
@@ -31,6 +32,9 @@ for entry in "${REPOS[@]}"; do
     current=$(git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
 
     # Fetch origin (and upstream if configured)
+    if [ -n "$branch" ]; then
+        git -C "$repo_dir" fetch --quiet origin "refs/heads/$branch:refs/remotes/origin/$branch" 2>/dev/null || true
+    fi
     git -C "$repo_dir" fetch --quiet origin 2>/dev/null || true
     if git -C "$repo_dir" remote get-url upstream &>/dev/null; then
         git -C "$repo_dir" fetch --quiet upstream 2>/dev/null || true

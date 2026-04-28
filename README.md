@@ -23,6 +23,7 @@ The default state is `current` unless `.wiring/current-state` selects another va
 | `vote-infrastructure`        | Deployment and infrastructure configuration                      | `main`                     |
 | `ypir`                       | PIR backend dependency                                           | `valar/artifact`           |
 | `spiral-rs`                  | PIR backend dependency                                           | `valar/avoid-avx512`       |
+| `cosmos-sdk-v0.53.5-fast-path` | Cosmos SDK fork with empty-block write fast paths              | `valar/v0.53.5`            |
 
 ## Setup
 
@@ -128,6 +129,8 @@ The `current` state wires:
 - `zcash-swift-wallet-sdk/Cargo.toml`
 - `zodl-ios/secant.xcodeproj/project.pbxproj`
 - `vote-nullifier-pir/Cargo.toml`
+- `vote-sdk/go.mod`
+- `vote-sdk/go.sum`
 
 Run `mise run wire:status` before editing any wired manifest or lock file. After intentional edits while wired local, run `mise run wire:update` to regenerate the state patches.
 

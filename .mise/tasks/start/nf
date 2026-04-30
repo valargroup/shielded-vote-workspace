@@ -1,22 +1,34 @@
 #!/usr/bin/env bash
-#MISE description="Bootstrap + start nullifier PIR server"
+#MISE description="Start nullifier PIR server (CDN bootstrap by default)"
 #MISE quiet=true
 set -e
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 PID_DIR="$DIR/.pids"
 PID_FILE="$PID_DIR/nf.pid"
-PORT=3000
+PORT="${SVOTE_PIR_PORT:-${PORT:-3000}}"
+NF_DIR="$DIR/vote-nullifier-pir"
+PIR_DATA_DIR="$NF_DIR/pir-data"
+NF_BIN="$NF_DIR/target/release/nf-server"
 mkdir -p "$PID_DIR"
+
+health_status() {
+    python3 -c 'import json,sys; print(json.load(sys.stdin).get("status","unknown"))' 2>/dev/null || echo "unknown"
+}
 
 # Truth source is the port, not the PID file — survive orphaned processes
 # from previous runs and writes the actual nf-server PID (not make's).
 LISTENING_PID=$(lsof -tnP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
 
 if [ -n "$LISTENING_PID" ]; then
-    if curl -sf "http://localhost:$PORT/health" > /dev/null 2>&1; then
+    if HEALTH=$(curl -sf "http://localhost:$PORT/health" 2>/dev/null); then
+        STATUS=$(printf '%s' "$HEALTH" | health_status)
+        if [ "$STATUS" = "error" ]; then
+            printf '\033[31mPort %s held by nf-server pid %s, but health status is error.\033[0m\n' "$PORT" "$LISTENING_PID"
+            exit 1
+        fi
         echo "$LISTENING_PID" > "$PID_FILE"
-        printf '\033[33mAlready running: nf-server (pid %s)\033[0m\n' "$LISTENING_PID"
+        printf '\033[33mAlready listening: nf-server (pid %s, health=%s)\033[0m\n' "$LISTENING_PID" "$STATUS"
         exit 0
     fi
     printf '\033[31mPort %s held by pid %s but /health not responding.\033[0m\n' "$PORT" "$LISTENING_PID"
@@ -27,20 +39,39 @@ fi
 # Stale tracking — clean up before we start fresh.
 rm -f "$PID_FILE"
 
-make -C "$DIR/vote-nullifier-pir" sync
-make -C "$DIR/vote-nullifier-pir" serve > "$DIR/nf-serve.log" 2>&1 &
-MAKE_PID=$!
+case "${SVOTE_PIR_START_SYNC:-}" in
+    1|true|TRUE|yes|YES)
+        make -C "$NF_DIR" sync
+        ;;
+    *)
+        echo "Skipping local nullifier sync/export; serve will bootstrap tiers from CDN."
+        echo "Set SVOTE_PIR_START_SYNC=1 to rebuild local pir-data before serving."
+        ;;
+esac
+
+cd "$NF_DIR" && cargo build -p nf-server --release --features serve
+
+"$NF_BIN" serve --pir-data-dir "$PIR_DATA_DIR" --port "$PORT" > "$DIR/nf-serve.log" 2>&1 &
+NF_PID=$!
 
 printf 'Waiting for nf-server to bind :%s...' "$PORT"
 for i in $(seq 1 30); do
     SERVER_PID=$(lsof -tnP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
-    if [ -n "$SERVER_PID" ] && curl -sf "http://localhost:$PORT/health" > /dev/null 2>&1; then
-        echo "$SERVER_PID" > "$PID_FILE"
-        printf ' \033[32mready (pid %s)\033[0m → nf-serve.log\n' "$SERVER_PID"
-        exit 0
+    if [ -n "$SERVER_PID" ]; then
+        if HEALTH=$(curl -sf "http://localhost:$PORT/health" 2>/dev/null); then
+            STATUS=$(printf '%s' "$HEALTH" | health_status)
+            if [ "$STATUS" = "error" ]; then
+                printf ' \033[31mhealth=error\033[0m\n'
+                tail -20 "$DIR/nf-serve.log"
+                exit 1
+            fi
+            echo "$SERVER_PID" > "$PID_FILE"
+            printf ' \033[32mstarted (pid %s, health=%s)\033[0m → nf-serve.log\n' "$SERVER_PID" "$STATUS"
+            exit 0
+        fi
     fi
-    if ! kill -0 "$MAKE_PID" 2>/dev/null; then
-        printf ' \033[31mmake exited before bind\033[0m\n'
+    if ! kill -0 "$NF_PID" 2>/dev/null; then
+        printf ' \033[31mnf-server exited before bind\033[0m\n'
         tail -20 "$DIR/nf-serve.log"
         exit 1
     fi

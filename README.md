@@ -42,24 +42,25 @@ mise run wire:local       # switch deps to local sibling paths
 ## Running locally
 
 ```
-mise run start            # full stack: nullifiers + chain + admin UI
+mise run start            # full stack: PIR server + chain + admin UI
 mise run status           # dashboard of all services
 mise run stop             # kill everything
 ```
 
 `mise run start` handles the full sequence:
 
-1. **Nullifier pipeline** — bootstrap data from remote (~7.4 GB one-time download), ingest to chain tip, export PIR tier files, start PIR server (port 3000)
+1. **PIR server** — start `nf-server` (port 3000) and let it bootstrap tier files from the published CDN snapshot
 2. **Chain** — build vote-sdk with FFI, init single-validator chain, start daemon, wait for readiness, register Pallas key
 3. **Admin UI** — starts Vite dev server (port 5173)
 
 To start individual services, use `mise run start:nf`, `mise run start:chain`, or `mise run start:ui`.
+Set `SVOTE_PIR_START_SYNC=1` before `mise run start:nf` only when you want to rebuild local nullifier/PIR data from lightwalletd.
 
 ### Ports
 
 | Service    | Port  |
 | ---------- | ----- |
-| Chain API  | 1318  |
+| Chain API  | 1317  |
 | Chain RPC  | 26657 |
 | PIR server | 3000  |
 | Admin UI   | 5173  |
@@ -71,6 +72,8 @@ mise run start:ios        # build Rust xcframework for simulator + device, then 
 ```
 
 When wired local, this builds the Rust FFI as a local xcframework for simulator and device, sets up `LocalPackages/` so the SDK auto-detects it, and opens `zodl-ios/secant.xcodeproj`. When wired remote, SPM fetches the prebuilt xcframework.
+
+The debug voting config generated for zodl-ios defaults to `localhost`, which is correct for the simulator. For a real device, regenerate it with `SVOTE_IOS_HOST=lan mise run wire:ios-config` before building, or set `SVOTE_IOS_HOST` to an explicit hostname/IP.
 
 After Rust code changes, re-run `mise run start:ios` to rebuild the xcframework, then Cmd+R again in Xcode. Swift-only changes just need Cmd+R.
 
@@ -96,9 +99,9 @@ The helper leaves `~/.android/advancedFeatures.ini` untouched and picks a render
 ### Services
 
 ```
-mise run start            # nullifiers + chain + admin UI
+mise run start            # PIR server + chain + admin UI
 mise run start:chain      # build + init + start single-validator chain
-mise run start:nf         # nullifier PIR server only
+mise run start:nf         # start PIR server; CDN bootstrap by default
 mise run start:ui         # admin UI only
 mise run start:ios        # build xcframework for simulator + device, then open Xcode
 mise run android:emu      # boot the named Android emulator outside Android Studio

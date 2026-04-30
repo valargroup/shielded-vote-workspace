@@ -5,6 +5,12 @@
 DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SVOTED_HOME="${SVOTED_HOME:-$DIR/.svoted}"
 PID_DIR="$DIR/.pids"
+NF_PORT="${SVOTE_PIR_PORT:-${PORT:-3000}}"
+UI_PORT="${SVOTE_UI_PORT:-5173}"
+
+json_field() {
+    python3 -c 'import json,sys; print(json.load(sys.stdin).get(sys.argv[1],"unknown"))' "$1" 2>/dev/null || echo "unknown"
+}
 
 # ── Chain ─────────────────────────────────────────────────────────
 printf "chain          "
@@ -19,9 +25,23 @@ fi
 # ── nf-server ────────────────────────────────────────────────────
 # Port is the truth source; PID file is just a hint that may be stale.
 printf "nf-server      "
-if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
-    NF_PID=$(lsof -tnP -iTCP:3000 -sTCP:LISTEN 2>/dev/null | head -1 || echo "?")
-    printf '\033[32m● running\033[0m   port 3000 (pid %s)\n' "$NF_PID"
+if HEALTH=$(curl -sf "http://localhost:$NF_PORT/health" 2>/dev/null); then
+    NF_PID=$(lsof -tnP -iTCP:$NF_PORT -sTCP:LISTEN 2>/dev/null | head -1 || echo "?")
+    NF_STATUS=$(printf '%s' "$HEALTH" | json_field status)
+    case "$NF_STATUS" in
+        ok)
+            printf '\033[32m● ready\033[0m     port %s (pid %s)\n' "$NF_PORT" "$NF_PID"
+            ;;
+        starting|rebuilding)
+            printf '\033[33m● %s\033[0m  port %s (pid %s)\n' "$NF_STATUS" "$NF_PORT" "$NF_PID"
+            ;;
+        error)
+            printf '\033[31m● error\033[0m     port %s (pid %s)\n' "$NF_PORT" "$NF_PID"
+            ;;
+        *)
+            printf '\033[33m● health=%s\033[0m port %s (pid %s)\n' "$NF_STATUS" "$NF_PORT" "$NF_PID"
+            ;;
+    esac
 elif [ -f "$PID_DIR/nf.pid" ] && kill -0 "$(cat "$PID_DIR/nf.pid")" 2>/dev/null; then
     printf '\033[33m● starting\033[0m  pid %s, not yet responding\n' "$(cat "$PID_DIR/nf.pid")"
 else
@@ -30,14 +50,15 @@ fi
 
 # ── Nullifier data ───────────────────────────────────────────────
 printf "nullifiers     "
-CP="$DIR/vote-nullifier-pir/nullifiers.checkpoint"
+PIR_DATA_DIR="$DIR/vote-nullifier-pir/pir-data"
+CP="$PIR_DATA_DIR/nullifiers.checkpoint"
 if [ -f "$CP" ]; then
     HEIGHT=$(od -An -t u8 -j 0 -N 8 "$CP" | tr -d ' ')
-    BYTES=$(wc -c < "$DIR/vote-nullifier-pir/nullifiers.bin" 2>/dev/null | tr -d ' ')
+    BYTES=$(wc -c < "$PIR_DATA_DIR/nullifiers.bin" 2>/dev/null | tr -d ' ')
     COUNT=$((BYTES / 32))
     printf '\033[32m✓ synced\033[0m    height %s  %sM nullifiers\n' "$HEIGHT" "$((COUNT / 1000000))"
 else
-    printf '\033[31m✗ no data\033[0m   run: mise run start\n'
+    printf '\033[33m- not synced locally\033[0m   set SVOTE_PIR_START_SYNC=1 for local rebuild\n'
 fi
 
 printf "pir-data       "
@@ -49,8 +70,11 @@ fi
 
 # ── Admin UI ─────────────────────────────────────────────────────
 printf "admin-ui       "
-if [ -f "$PID_DIR/ui.pid" ] && kill -0 "$(cat "$PID_DIR/ui.pid")" 2>/dev/null; then
-    printf '\033[32m● running\033[0m   port 5173\n'
+UI_PID=$(lsof -tnP -iTCP:$UI_PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
+if [ -n "$UI_PID" ]; then
+    printf '\033[32m● running\033[0m   port %s (pid %s)\n' "$UI_PORT" "$UI_PID"
+elif [ -f "$PID_DIR/ui.pid" ] && kill -0 "$(cat "$PID_DIR/ui.pid")" 2>/dev/null; then
+    printf '\033[33m● starting\033[0m  pid %s, not yet listening\n' "$(cat "$PID_DIR/ui.pid")"
 else
     printf '\033[31m○ stopped\033[0m\n'
 fi
@@ -60,7 +84,7 @@ echo ""
 printf '\033[2m'
 echo "Chain data     .svoted/"
 echo "Chain log      ./svoted.log"
-echo "Nullifier data vote-nullifier-pir/nullifiers.{bin,checkpoint}"
+echo "Nullifier data vote-nullifier-pir/pir-data/nullifiers.{bin,checkpoint}"
 echo "PIR data       vote-nullifier-pir/pir-data/"
 echo "nf-server log  ./nf-serve.log"
 echo "Admin UI log   ./ui.log"

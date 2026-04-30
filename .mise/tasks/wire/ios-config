@@ -18,16 +18,33 @@ if [ ! -f "$SOURCE" ]; then
     exit 1
 fi
 
-# Bonjour hostname resolves on both simulator (loopback) and on-device (mDNS over LAN).
-HOST="$(scutil --get LocalHostName).local"
+# Simulator builds can use localhost. For a real device, set
+# SVOTE_IOS_HOST=lan to use the Mac's LAN IP, or set SVOTE_IOS_HOST to an
+# explicit hostname/IP when testing through a tunnel or another interface.
+if [ "${SVOTE_IOS_HOST:-}" = "lan" ]; then
+    IFACE="$(route -n get default 2>/dev/null | sed -n 's/^ *interface: //p' | head -1)"
+    HOST="$(ipconfig getifaddr "$IFACE" 2>/dev/null || true)"
+    if [ -z "$HOST" ]; then
+        HOST="$(ifconfig "$IFACE" 2>/dev/null | awk '/inet / && $2 != "127.0.0.1" { print $2; exit }')"
+    fi
+    if [ -z "$HOST" ]; then
+        HOST="127.0.0.1"
+    fi
+elif [ -n "${SVOTE_IOS_HOST:-}" ]; then
+    HOST="$SVOTE_IOS_HOST"
+else
+    HOST="localhost"
+fi
 
-# Swap only the endpoint URLs; preserve every other required field
-# (vote_round_id, snapshot_height, proposals, supported_versions, …).
-jq --arg vote "http://${HOST}:1318" \
-   --arg pir  "http://${HOST}:3000" \
+VOTE_URL="http://${HOST}:1317"
+PIR_URL="http://${HOST}:3000"
+
+# Swap only the endpoint URLs; preserve round metadata from the source config.
+jq --arg vote "$VOTE_URL" \
+   --arg pir  "$PIR_URL" \
    '.vote_servers  = [{"url": $vote, "label": "Local"}] |
     .pir_endpoints = [{"url": $pir,  "label": "Local"}]' \
    "$SOURCE" > "$TARGET"
 
-printf '  \033[32m✓\033[0m %-40s pointing at %s (vote :1318, pir :3000)\n' \
+printf '  \033[32m✓\033[0m %-40s pointing at %s (vote :1317, pir :3000)\n' \
     "zodl-ios/secant/Resources/voting-config-local.json" "$HOST"

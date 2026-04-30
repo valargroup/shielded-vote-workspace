@@ -1,12 +1,12 @@
 diff --git a/voting-circuits/Cargo.toml b/voting-circuits/Cargo.toml
-index 4911f72..71de4ac 100644
+index 3612e31..14e4d24 100644
 --- a/voting-circuits/Cargo.toml
 +++ b/voting-circuits/Cargo.toml
 @@ -8,7 +8,7 @@ repository = "https://github.com/valargroup/voting-circuits"
  readme = "README.md"
  
  [dependencies]
--orchard = { git = "https://github.com/valargroup/orchard.git", branch = "valar/0.13-spend-auth-g", features = ["circuit", "unstable-voting-circuits"] }
+-orchard = { version = "=0.13.1", features = ["circuit", "unstable-voting-circuits"] }
 +orchard = { path = "../../orchard", features = ["circuit", "unstable-voting-circuits"] }
  halo2_proofs = { version = "0.3", default-features = false, features = ["batch", "floor-planner-v1-legacy-pdqsort"] }
  halo2_gadgets = { version = "0.4", default-features = false }

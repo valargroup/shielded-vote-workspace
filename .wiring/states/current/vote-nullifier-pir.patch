@@ -1,21 +1,15 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 610fa70..200fd7e 100644
+index 200fd7e..4a5ae02 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -14,16 +14,6 @@ members = [
+@@ -14,6 +14,10 @@ members = [
  [workspace.dependencies]
  imt-tree = { path = "imt-tree", version = "0.1.1" }
  
--# Source overrides (applied via the .wiring patch chain when developing in
--# shielded-vote-workspace).
--[patch.crates-io]
--# Pinned to the head of valargroup/ypir#17 ("Add additive SimplePIR batch
--# query/decode path"), which adds the YPIRClient::generate_query_simplepir_batch
--# / decode_response_simplepir_batch[_raw] surface that the workspace's batched
--# PIR path consumes. valar-spiral-rs (0.5.1) is consumed directly from
--# crates.io as a transitive dep of valar-ypir; no override is needed.
--valar-ypir = { git = "https://github.com/valargroup/ypir", rev = "ff295e962d7d77e7f922b1101bcdf5e160fc0adb" }
--
++[patch.crates-io]
++valar-ypir = { path = "../ypir" }
++valar-spiral-rs = { path = "../spiral-rs" }
++
  [profile.release]
  lto = "fat"
  codegen-units = 1

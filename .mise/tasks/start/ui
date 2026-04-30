@@ -6,6 +6,7 @@ set -e
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 UI_DIR="$DIR/vote-sdk/ui"
 PID_DIR="$DIR/.pids"
+UI_PORT="${SVOTE_UI_PORT:-5173}"
 mkdir -p "$PID_DIR"
 
 if [ ! -d "$UI_DIR" ]; then
@@ -13,18 +14,41 @@ if [ ! -d "$UI_DIR" ]; then
     exit 1
 fi
 
+UI_PID=$(lsof -tnP -iTCP:$UI_PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
+if [ -n "$UI_PID" ]; then
+    echo "$UI_PID" > "$PID_DIR/ui.pid"
+    printf '\033[33mAlready running: admin UI on port %s (pid %s)\033[0m\n' "$UI_PORT" "$UI_PID"
+    exit 0
+fi
 if [ -f "$PID_DIR/ui.pid" ] && kill -0 "$(cat "$PID_DIR/ui.pid")" 2>/dev/null; then
-    printf '\033[33mAlready running: admin UI\033[0m\n'
+    printf '\033[33mAlready starting: admin UI (pid %s)\033[0m\n' "$(cat "$PID_DIR/ui.pid")"
     exit 0
 fi
 
 UI_ENV="$UI_DIR/.env"
+CHAIN_URL="${SVOTE_CHAIN_URL:-${VITE_CHAIN_URL:-http://localhost:1317}}"
 
 # Ensure .env exists (copy from .env.example if missing).
 if [ ! -f "$UI_ENV" ] && [ -f "$UI_DIR/.env.example" ]; then
     cp "$UI_DIR/.env.example" "$UI_ENV"
     printf '\033[32mCreated admin UI .env from .env.example\033[0m\n'
 fi
+
+# Keep the dev-server proxy pointed at the local svoted REST/API port. Older
+# generated .env files used :1318, which makes Vite return proxy 500s locally.
+if [ -f "$UI_ENV" ]; then
+    EXISTING_CHAIN_URL=$(grep '^VITE_CHAIN_URL=' "$UI_ENV" 2>/dev/null | cut -d= -f2-)
+    if [ -z "$EXISTING_CHAIN_URL" ] || [ "$EXISTING_CHAIN_URL" = "http://localhost:1318" ] || [ "$EXISTING_CHAIN_URL" = "http://127.0.0.1:1318" ]; then
+        if grep -q '^VITE_CHAIN_URL=' "$UI_ENV"; then
+            sed -i.bak "s|^VITE_CHAIN_URL=.*|VITE_CHAIN_URL=$CHAIN_URL|" "$UI_ENV"
+            rm -f "$UI_ENV.bak"
+        else
+            echo "VITE_CHAIN_URL=$CHAIN_URL" >> "$UI_ENV"
+        fi
+        printf '\033[32mSynced VITE_CHAIN_URL to %s\033[0m\n' "$CHAIN_URL"
+    fi
+fi
+export VITE_CHAIN_URL="$CHAIN_URL"
 
 # Inject first VM_PRIVKEYS entry from vote-sdk into admin UI .env.
 VM_KEY=""
@@ -45,6 +69,6 @@ if [ -n "$VM_KEY" ] && [ -f "$UI_ENV" ]; then
 fi
 
 cd "$UI_DIR" && npm install --silent
-npm run dev > "$DIR/ui.log" 2>&1 &
+npm run dev -- --port "$UI_PORT" > "$DIR/ui.log" 2>&1 &
 echo $! > "$PID_DIR/ui.pid"
-printf '\033[32mStarted admin UI → ui.log (port 5173)\033[0m\n'
+printf '\033[32mStarted admin UI → ui.log (port %s)\033[0m\n' "$UI_PORT"

@@ -1,34 +1,18 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index bb2ceb09..285bf8a7 100644
+index 954b4c9e..16a0b4b2 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -107,16 +107,16 @@ lto = true
- # 0.7.0 (which `transparent`/`zcash_primitives` 0.27 expect) is now published
- # to crates.io, so no patch is needed.
- [patch.crates-io]
--orchard = { git = "https://github.com/valargroup/orchard.git", branch = "valar/0.13-spend-auth-g" }
--voting-circuits = { git = "https://github.com/valargroup/voting-circuits.git", branch = "valar/orchard-0.13" }
--zcash_voting = { git = "https://github.com/valargroup/zcash_voting.git", branch = "valar/orchard-0.13" }
--pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--transparent = { package = "zcash_transparent", git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_client_backend = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_client_sqlite = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_encoding = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_proofs = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
--zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "976efa76ca2195d693f373aeaa201a2c50b6e0ab" }
+@@ -85,6 +85,13 @@ voting-circuits = { version = "0.3.1", features = ["share-reveal"] }
+ zcash_keys = { version = "0.13", features = ["orchard"] }
+ incrementalmerkletree = { version = "0.8", default-features = false }
+ 
++[patch.crates-io]
 +orchard = { path = "../orchard" }
 +voting-circuits = { path = "../voting-circuits/voting-circuits" }
 +zcash_voting = { path = "../zcash_voting/zcash_voting" }
-+pczt = { path = "../librustzcash/pczt" }
-+transparent = { package = "zcash_transparent", path = "../librustzcash/zcash_transparent" }
-+zcash_address = { path = "../librustzcash/components/zcash_address" }
-+zcash_client_backend = { path = "../librustzcash/zcash_client_backend" }
-+zcash_client_sqlite = { path = "../librustzcash/zcash_client_sqlite" }
-+zcash_encoding = { path = "../librustzcash/components/zcash_encoding" }
-+zcash_keys = { path = "../librustzcash/zcash_keys" }
-+zcash_primitives = { path = "../librustzcash/zcash_primitives" }
-+zcash_proofs = { path = "../librustzcash/zcash_proofs" }
-+zcash_protocol = { path = "../librustzcash/components/zcash_protocol" }
++imt-tree = { path = "../vote-nullifier-pir/imt-tree" }
++pir-client = { path = "../vote-nullifier-pir/pir/client" }
++
+ [build-dependencies]
+ bindgen = "0.72"
+ cbindgen = "0.29"

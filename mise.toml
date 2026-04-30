@@ -10,7 +10,7 @@ node = "lts"
 #
 #   start          Start everything (chain + nullifier + admin UI)
 #   start:chain    Build + init + start single-validator chain
-#   start:nf       Bootstrap + start nullifier PIR server
+#   start:nf       Start nullifier PIR server (CDN bootstrap by default)
 #   start:ui       Start admin UI dev server
 #   start:ios      Build xcframework for simulator + open Xcode
 #   android:emu    Boot the Android emulator outside Android Studio

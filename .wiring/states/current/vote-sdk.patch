@@ -1,4 +1,5 @@
 diff --git a/circuits/Cargo.toml b/circuits/Cargo.toml
+index 553d829b..71be93e1 100644
 --- a/circuits/Cargo.toml
 +++ b/circuits/Cargo.toml
 @@ -13,10 +13,10 @@ pasta_curves = "0.5"
@@ -10,13 +11,14 @@ diff --git a/circuits/Cargo.toml b/circuits/Cargo.toml
 -voting-circuits = { version = "0.3.1", features = ["share-reveal"] }
 -imt-tree = { git = "https://github.com/valargroup/vote-nullifier-pir.git" }
 +vote-commitment-tree = { path = "../../zcash_voting/vote-commitment-tree" }
-+orchard = { path = "../../voting-circuits/orchard" }
++orchard = { path = "../../orchard" }
 +voting-circuits = { path = "../../voting-circuits/voting-circuits", features = ["share-reveal"] }
 +imt-tree = { path = "../../vote-nullifier-pir/imt-tree" }
  incrementalmerkletree = "0.8"
  hex = "0.4"
  halo2_gadgets = "0.4"
 diff --git a/e2e-tests/Cargo.toml b/e2e-tests/Cargo.toml
+index ba7e8860..91f63b46 100644
 --- a/e2e-tests/Cargo.toml
 +++ b/e2e-tests/Cargo.toml
 @@ -8,11 +8,11 @@ description = "Rust E2E API tests for Shielded-Vote voting flow (replaces TypeSc

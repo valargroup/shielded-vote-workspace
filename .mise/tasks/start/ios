@@ -128,6 +128,10 @@ fi
 
 fi # SDK_WIRED_LOCAL
 
+# Refresh the debug voting-service override before Xcode copies it into the
+# app bundle. This keeps zodl-ios pointed at the local active round.
+mise run wire:ios-config
+
 # ── Open Xcode ──────────────────────────────────────────────────
 PROJECT="$DIR/zodl-ios/secant.xcodeproj"
 if [ -d "$PROJECT" ]; then

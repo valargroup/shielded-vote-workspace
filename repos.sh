@@ -25,6 +25,7 @@ REPOS=(
     "shielded-vote-book|https://github.com/valargroup/shielded-vote-book"
     "token-holder-voting-config|https://github.com/valargroup/token-holder-voting-config.git"
     "vote-infrastructure|https://github.com/valargroup/vote-infrastructure.git"
+    "zips|https://github.com/zcash/zips.git"
     "ypir|git@github.com:valargroup/ypir.git"
     "spiral-rs|git@github.com:valargroup/spiral-rs.git"
 )
@@ -49,6 +50,7 @@ BRANCHES_current=(
     "shielded-vote-book:main"
     "token-holder-voting-config:main"
     "vote-infrastructure:main"
+    "zips:main"
     "ypir:valar/artifact"
     "spiral-rs:valar/avoid-avx512"
 )

@@ -10,7 +10,8 @@
     { "path": "zcash-swift-wallet-sdk" },
     { "path": "zodl-android" },
     { "path": "zodl-ios" },
-    { "path": "shielded-vote-book" }
+    { "path": "shielded-vote-book" },
+    { "path": "zips" }
   ],
   "settings": {
     "git.autoRepositoryDetection": "subFolders",
@@ -24,7 +25,8 @@
       "zcash-swift-wallet-sdk",
       "zodl-android",
       "zodl-ios",
-      "shielded-vote-book"
+      "shielded-vote-book",
+      "zips"
     ],
     "gitlens.advanced.repositorySearchDepth": 1
   }

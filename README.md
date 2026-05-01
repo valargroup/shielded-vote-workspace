@@ -23,6 +23,7 @@ The default state is `current` unless `.wiring/current-state` selects another va
 | `shielded-vote-book`           | Project documentation                                         | `main`                 |
 | `token-holder-voting-config`   | Public voting service configuration                           | `main`                 |
 | `vote-infrastructure`          | Deployment and infrastructure configuration                   | `main`                 |
+| `zips`                         | Zcash Improvement Proposals                                   | `main`                 |
 | `ypir`                         | PIR backend dependency                                        | `valar/artifact`       |
 | `spiral-rs`                    | PIR backend dependency                                        | `valar/avoid-avx512`   |
 

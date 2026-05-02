@@ -78,7 +78,7 @@ The debug voting config generated for zodl-ios defaults to `localhost`, which is
 
 After Rust code changes, re-run `mise run start:ios` to rebuild the xcframework, then Cmd+R again in Xcode. Swift-only changes just need Cmd+R.
 
-The iOS app fetches its voting service config from the [GitHub Pages CDN](https://valargroup.github.io/token-holder-voting-config/) at startup.
+The iOS app fetches its voting service config from the [Cloudflare-managed config host](https://voting.valargroup.org/) at startup.
 
 ### Android app
 

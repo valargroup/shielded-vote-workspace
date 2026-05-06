@@ -4,7 +4,6 @@
 
 DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
-tail -f "$DIR/svoted.log" "$DIR/nf-serve.log" "$DIR/ui.log" | sed \
+tail -f "$DIR/svoted.log" "$DIR/nf-serve.log" | sed \
     -e "s|^==> $DIR/svoted.log <==|\x1b[36m[svoted]\x1b[0m|" \
-    -e "s|^==> $DIR/nf-serve.log <==|\x1b[33m[nf-server]\x1b[0m|" \
-    -e "s|^==> $DIR/ui.log <==|\x1b[35m[admin-ui]\x1b[0m|"
+    -e "s|^==> $DIR/nf-serve.log <==|\x1b[33m[nf-server]\x1b[0m|"

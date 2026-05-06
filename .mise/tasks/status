@@ -6,7 +6,7 @@ DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SVOTED_HOME="${SVOTED_HOME:-$DIR/.svoted}"
 PID_DIR="$DIR/.pids"
 NF_PORT="${SVOTE_PIR_PORT:-${PORT:-3000}}"
-UI_PORT="${SVOTE_UI_PORT:-5173}"
+CHAIN_PORT="${SVOTE_CHAIN_PORT:-1317}"
 
 json_field() {
     python3 -c 'import json,sys; print(json.load(sys.stdin).get(sys.argv[1],"unknown"))' "$1" 2>/dev/null || echo "unknown"
@@ -70,11 +70,10 @@ fi
 
 # ── Admin UI ─────────────────────────────────────────────────────
 printf "admin-ui       "
-UI_PID=$(lsof -tnP -iTCP:$UI_PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)
-if [ -n "$UI_PID" ]; then
-    printf '\033[32m● running\033[0m   port %s (pid %s)\n' "$UI_PORT" "$UI_PID"
-elif [ -f "$PID_DIR/ui.pid" ] && kill -0 "$(cat "$PID_DIR/ui.pid")" 2>/dev/null; then
-    printf '\033[33m● starting\033[0m  pid %s, not yet listening\n' "$(cat "$PID_DIR/ui.pid")"
+if curl -sf --max-time 2 "http://localhost:$CHAIN_PORT/" 2>/dev/null | grep -q "<div id=\"root\""; then
+    printf '\033[32m● served\033[0m    via svoted port %s\n' "$CHAIN_PORT"
+elif [ -n "$STATUS" ]; then
+    printf '\033[33m○ unavailable\033[0m svoted running, UI not served\n'
 else
     printf '\033[31m○ stopped\033[0m\n'
 fi
@@ -87,8 +86,7 @@ echo "Chain log      ./svoted.log"
 echo "Nullifier data vote-nullifier-pir/pir-data/nullifiers.{bin,checkpoint}"
 echo "PIR data       vote-nullifier-pir/pir-data/"
 echo "nf-server log  ./nf-serve.log"
-echo "Admin UI log   ./ui.log"
-echo "Admin UI       vote-sdk/ui/"
+echo "Admin UI       http://localhost:$CHAIN_PORT/"
 echo ""
 echo "Tail all logs: mise run logs"
 printf '\033[0m'

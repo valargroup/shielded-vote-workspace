@@ -43,7 +43,7 @@ mise run wire:local       # switch deps to local sibling paths
 ## Running locally
 
 ```
-mise run start            # full stack: PIR server + chain + admin UI
+mise run start            # full stack: PIR server + chain-hosted admin UI
 mise run status           # dashboard of all services
 mise run stop             # kill everything
 ```
@@ -51,10 +51,11 @@ mise run stop             # kill everything
 `mise run start` handles the full sequence:
 
 1. **PIR server** — start `nf-server` (port 3000) and let it bootstrap tier files from the published CDN snapshot
-2. **Chain** — build vote-sdk with FFI, init single-validator chain, start daemon, wait for readiness, register Pallas key
-3. **Admin UI** — starts Vite dev server (port 5173)
+2. **Admin UI build** — build the Vite app into `vote-sdk/ui/dist`
+3. **Chain** — build vote-sdk with FFI, init single-validator chain, start daemon with `--serve-ui`, wait for readiness, register Pallas key
+4. **iOS local config** — refresh `zodl-ios/secant/Resources/voting-config-local.json` for simulator/debug workflows
 
-To start individual services, use `mise run start:nf`, `mise run start:chain`, or `mise run start:ui`.
+To start individual services, use `mise run start:nf` or `mise run start:chain`.
 Set `SVOTE_PIR_START_SYNC=1` before `mise run start:nf` only when you want to rebuild local nullifier/PIR data from lightwalletd.
 
 ### Ports
@@ -64,7 +65,7 @@ Set `SVOTE_PIR_START_SYNC=1` before `mise run start:nf` only when you want to re
 | Chain API  | 1317  |
 | Chain RPC  | 26657 |
 | PIR server | 3000  |
-| Admin UI   | 5173  |
+| Admin UI   | 1317  |
 
 ### iOS app
 
@@ -100,19 +101,17 @@ The helper leaves `~/.android/advancedFeatures.ini` untouched and picks a render
 ### Services
 
 ```
-mise run start            # PIR server + chain + admin UI
-mise run start:chain      # build + init + start single-validator chain
+mise run start            # PIR server + chain-hosted admin UI
+mise run start:chain      # build UI + init + start single-validator chain
 mise run start:nf         # start PIR server; CDN bootstrap by default
-mise run start:ui         # admin UI only
 mise run start:ios        # build xcframework for simulator + device, then open Xcode
 mise run android:emu      # boot the named Android emulator outside Android Studio
 mise run android:run      # build, install, and launch zcashmainnetFossDebug
 mise run stop             # stop all services
-mise run stop:chain       # stop only svoted
+mise run stop:chain       # stop svoted (chain + admin UI)
 mise run stop:nf          # stop only nf-server
-mise run stop:ui          # stop only admin UI
 mise run status           # service dashboard
-mise run logs             # tail merged logs from svoted, nf-server, and admin UI
+mise run logs             # tail merged logs from svoted and nf-server
 ```
 
 ### Git coordination

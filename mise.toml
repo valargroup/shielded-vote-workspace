@@ -8,18 +8,16 @@ node = "lts"
 #
 # Available tasks (mise tasks ls):
 #
-#   start          Start everything (chain + nullifier + admin UI)
-#   start:chain    Build + init + start single-validator chain
+#   start          Start everything (PIR + chain-hosted admin UI)
+#   start:chain    Build + init + start single-validator chain with admin UI
 #   start:nf       Start nullifier PIR server (CDN bootstrap by default)
-#   start:ui       Start admin UI dev server
 #   start:ios      Build xcframework for simulator + open Xcode
 #   reset:ios      Wipe Xcode/SwiftPM caches when package resolution wedges
 #   android:emu    Boot the Android emulator outside Android Studio
 #   android:run    Build, install, and launch the Android debug app
 #   stop           Stop all services
-#   stop:chain     Stop only svoted
+#   stop:chain     Stop svoted (chain + admin UI)
 #   stop:nf        Stop only nf-server
-#   stop:ui        Stop only admin UI
 #   status         Show status of all services
 #   logs           Tail merged logs
 #   wire:local     Apply local wiring (path deps)

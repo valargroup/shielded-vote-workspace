@@ -7,14 +7,48 @@ DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 PID_DIR="$DIR/.pids"
 
 KILLED=""
-for svc in chain nf ui; do
+pid_alive() {
+    lsof -p "$1" > /dev/null 2>&1
+}
+
+stop_pid() {
+    PID="$1"
+    kill "$PID" 2>/dev/null || true
+    for i in $(seq 1 20); do
+        pid_alive "$PID" || return 0
+        sleep 0.25
+    done
+    kill -KILL "$PID" 2>/dev/null || true
+    for i in $(seq 1 20); do
+        pid_alive "$PID" || return 0
+        sleep 0.25
+    done
+    return 1
+}
+
+for svc in chain nf; do
     PID_FILE="$PID_DIR/$svc.pid"
-    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-        kill "$(cat "$PID_FILE")" 2>/dev/null
-        KILLED="$KILLED $svc"
+    if [ -f "$PID_FILE" ] && pid_alive "$(cat "$PID_FILE")"; then
+        if stop_pid "$(cat "$PID_FILE")"; then
+            KILLED="$KILLED $svc"
+        else
+            printf '\033[31mFailed to stop %s pid %s\033[0m\n' "$svc" "$(cat "$PID_FILE")"
+            exit 1
+        fi
     fi
     rm -f "$PID_FILE"
 done
+
+LEGACY_UI_PID_FILE="$PID_DIR/ui.pid"
+if [ -f "$LEGACY_UI_PID_FILE" ] && pid_alive "$(cat "$LEGACY_UI_PID_FILE")"; then
+    if stop_pid "$(cat "$LEGACY_UI_PID_FILE")"; then
+        KILLED="$KILLED legacy-ui"
+    else
+        printf '\033[31mFailed to stop legacy admin UI pid %s\033[0m\n' "$(cat "$LEGACY_UI_PID_FILE")"
+        exit 1
+    fi
+fi
+rm -f "$LEGACY_UI_PID_FILE"
 
 if [ -n "$KILLED" ]; then
     printf '\033[32mStopped:%s\033[0m\n' "$KILLED"

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-#MISE description="Init chain + bootstrap nullifiers + start everything"
+#MISE description="Start PIR server + chain-hosted admin UI"
 #MISE alias="start"
 #MISE quiet=true
 set -e
 
 mise run start:nf
 mise run start:chain
-mise run start:ui

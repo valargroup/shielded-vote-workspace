@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Stop only nf-server (leave svoted + admin UI running)"
+#MISE description="Stop only nf-server (leave svoted running)"
 #MISE quiet=true
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"

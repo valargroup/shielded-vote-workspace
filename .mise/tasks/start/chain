@@ -1,20 +1,45 @@
 #!/usr/bin/env bash
-#MISE description="Build + init + start single-validator chain"
+#MISE description="Build + init + start single-validator chain with admin UI"
 #MISE quiet=true
 set -e
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 export SVOTED_HOME="$DIR/.svoted"
 export PATH="$HOME/go/bin:$PATH"
+CHAIN_PORT="${SVOTE_CHAIN_PORT:-1317}"
 
 PID_DIR="$DIR/.pids"
 mkdir -p "$PID_DIR"
-if [ -f "$PID_DIR/chain.pid" ] && kill -0 "$(cat "$PID_DIR/chain.pid")" 2>/dev/null; then
-    printf '\033[33mAlready running: svoted\033[0m\n'
-    exit 0
+
+pid_alive() {
+    lsof -p "$1" > /dev/null 2>&1
+}
+
+RUNNING_PID=""
+if [ -f "$PID_DIR/chain.pid" ] && pid_alive "$(cat "$PID_DIR/chain.pid")"; then
+    RUNNING_PID="$(cat "$PID_DIR/chain.pid")"
+fi
+if [ -z "$RUNNING_PID" ]; then
+    RUNNING_PID="$(lsof -tnP -iTCP:$CHAIN_PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)"
+fi
+if [ -z "$RUNNING_PID" ]; then
+    RUNNING_PID="$(lsof -tnP -iTCP:26657 -sTCP:LISTEN 2>/dev/null | head -1 || true)"
 fi
 
-# ── Ensure vote-sdk .env with VM_PRIVKEY ─────────────────────────
+if [ -n "$RUNNING_PID" ]; then
+    echo "$RUNNING_PID" > "$PID_DIR/chain.pid"
+    if curl -sf --max-time 2 "http://localhost:$CHAIN_PORT/" 2>/dev/null | grep -q "<div id=\"root\""; then
+        printf '\033[33mAlready running: svoted with admin UI\033[0m\n'
+        mise run wire:ios-config
+        exit 0
+    else
+        printf '\033[33mAlready running: svoted, but admin UI is not served.\033[0m\n'
+        printf 'Restart it to pick up in-process UI: mise run stop:chain && mise run start:chain\n'
+        exit 1
+    fi
+fi
+
+# ── Ensure vote-sdk .env with VM_PRIVKEYS ────────────────────────
 ENV_FILE="$DIR/vote-sdk/.env"
 if [ ! -f "$ENV_FILE" ]; then
     if [ -f "$DIR/vote-sdk/.env.example" ]; then
@@ -24,33 +49,49 @@ if [ ! -f "$ENV_FILE" ]; then
         touch "$ENV_FILE"
     fi
 fi
-# Fill in VM_PRIVKEY if missing or empty.
-EXISTING_KEY=$(grep '^VM_PRIVKEY=' "$ENV_FILE" 2>/dev/null | cut -d= -f2)
-if [ -z "$EXISTING_KEY" ]; then
-    KEY=$(openssl rand -hex 32)
-    if grep -q '^VM_PRIVKEY=' "$ENV_FILE"; then
-        sed -i.bak "s/^VM_PRIVKEY=.*/VM_PRIVKEY=$KEY/" "$ENV_FILE"
+# Fill in VM_PRIVKEYS if missing or empty. init.sh imports the first entry as
+# the local vote-manager key, and the admin UI build uses it for dev prefill.
+EXISTING_KEYS=$(grep '^VM_PRIVKEYS=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '[:space:]')
+if [ -z "$EXISTING_KEYS" ]; then
+    LEGACY_KEY=$(grep '^VM_PRIVKEY=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+    KEY="${LEGACY_KEY:-$(openssl rand -hex 32)}"
+    if grep -q '^VM_PRIVKEYS=' "$ENV_FILE"; then
+        sed -i.bak "s/^VM_PRIVKEYS=.*/VM_PRIVKEYS=$KEY/" "$ENV_FILE"
         rm -f "$ENV_FILE.bak"
     else
-        echo "VM_PRIVKEY=$KEY" >> "$ENV_FILE"
+        echo "VM_PRIVKEYS=$KEY" >> "$ENV_FILE"
     fi
-    printf '\033[32mGenerated VM_PRIVKEY in vote-sdk/.env\033[0m\n'
+    printf '\033[32mSet VM_PRIVKEYS in vote-sdk/.env\033[0m\n'
 fi
 
-# ── Build + init ─────────────────────────────────────────────────
+# ── Build admin UI for in-process serving ────────────────────────
+VM_KEY=$(grep '^VM_PRIVKEYS=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | cut -d, -f1 | tr -d '[:space:]')
+UI_CHAIN_URL="${SVOTE_CHAIN_URL:-${VITE_CHAIN_URL:-}}"
+VITE_CHAIN_URL="$UI_CHAIN_URL" \
+VITE_VM_PRIVKEY="$VM_KEY" \
+make -C "$DIR/vote-sdk" ui-build
+
+# ── Build + init chain ───────────────────────────────────────────
 SVOTE_ADMIN_DISABLE=${SVOTE_ADMIN_DISABLE:-false} \
 make -C "$DIR/vote-sdk" init
 
 # ── Start svoted ─────────────────────────────────────────────────
+UI_DIST="$DIR/vote-sdk/ui/dist"
 SVOTE_PIR_URL=${SVOTE_PIR_URL:-http://localhost:3000} \
 SVOTE_LWD_URLS=${SVOTE_LWD_URLS:-https://zec.rocks:443} \
-svoted start --home "$SVOTED_HOME" > "$DIR/svoted.log" 2>&1 &
+svoted start --home "$SVOTED_HOME" --serve-ui --ui-dist "$UI_DIST" > "$DIR/svoted.log" 2>&1 &
 echo $! > "$PID_DIR/chain.pid"
-printf '\033[32mStarted svoted → svoted.log\033[0m\n'
+CHAIN_PID="$(cat "$PID_DIR/chain.pid")"
+printf '\033[32mStarted svoted with admin UI → svoted.log\033[0m\n'
 
 # ── Wait for chain readiness ────────────────────────────────────
 printf 'Waiting for chain to be ready...'
 for i in $(seq 1 60); do
+    if ! pid_alive "$CHAIN_PID"; then
+        printf ' \033[31mFAILED\033[0m\n'
+        tail -50 "$DIR/svoted.log"
+        exit 1
+    fi
     if svoted status --home "$SVOTED_HOME" 2>/dev/null | grep -q latest_block_height; then
         printf ' \033[32mready\033[0m\n'
         break
@@ -67,9 +108,38 @@ done
 # ── Wait for helper server ──────────────────────────────────────
 printf 'Waiting for helper server...'
 for i in $(seq 1 15); do
-    if curl -sf http://localhost:1317/shielded-vote/v1/vote-managers > /dev/null 2>&1; then
+    if ! pid_alive "$CHAIN_PID"; then
+        printf ' \033[31mFAILED\033[0m\n'
+        tail -50 "$DIR/svoted.log"
+        exit 1
+    fi
+    if curl -sf "http://localhost:$CHAIN_PORT/shielded-vote/v1/vote-managers" > /dev/null 2>&1; then
         printf ' \033[32mready\033[0m\n'
         break
+    fi
+    printf '.'
+    sleep 1
+done
+
+# ── Refresh iOS local voting config ──────────────────────────────
+mise run wire:ios-config
+
+# ── Wait for admin UI ────────────────────────────────────────────
+printf 'Waiting for admin UI...'
+for i in $(seq 1 15); do
+    if ! pid_alive "$CHAIN_PID"; then
+        printf ' \033[31mFAILED\033[0m\n'
+        tail -50 "$DIR/svoted.log"
+        exit 1
+    fi
+    if curl -sf --max-time 2 "http://localhost:$CHAIN_PORT/" 2>/dev/null | grep -q "<div id=\"root\""; then
+        printf ' \033[32mready\033[0m\n'
+        break
+    fi
+    if [ "$i" -eq 15 ]; then
+        printf ' \033[31mTIMEOUT\033[0m\n'
+        tail -50 "$DIR/svoted.log"
+        exit 1
     fi
     printf '.'
     sleep 1

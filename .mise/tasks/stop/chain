@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-#MISE description="Stop only svoted (leave nf-server + admin UI running)"
+#MISE description="Stop svoted (chain + admin UI; leave nf-server running)"
 #MISE quiet=true
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 PID_FILE="$DIR/.pids/chain.pid"
 CHAIN_PORT="${SVOTE_CHAIN_PORT:-1317}"
 
+pid_alive() {
+    lsof -p "$1" > /dev/null 2>&1
+}
+
 PID=""
-if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+if [ -f "$PID_FILE" ] && pid_alive "$(cat "$PID_FILE")"; then
     PID="$(cat "$PID_FILE")"
 else
     PID="$(lsof -tnP -iTCP:$CHAIN_PORT -sTCP:LISTEN 2>/dev/null | head -1 || true)"
@@ -16,11 +20,23 @@ fi
 if [ -n "$PID" ]; then
     kill "$PID" 2>/dev/null || true
     for i in $(seq 1 20); do
-        kill -0 "$PID" 2>/dev/null || break
+        pid_alive "$PID" || break
         sleep 0.25
     done
-    rm -f "$PID_FILE"
-    printf '\033[32mStopped svoted\033[0m\n'
+    if pid_alive "$PID"; then
+        kill -KILL "$PID" 2>/dev/null || true
+        for i in $(seq 1 20); do
+            pid_alive "$PID" || break
+            sleep 0.25
+        done
+    fi
+    if pid_alive "$PID"; then
+        printf '\033[31mFailed to stop svoted pid %s\033[0m\n' "$PID"
+        exit 1
+    else
+        rm -f "$PID_FILE"
+        printf '\033[32mStopped svoted\033[0m\n'
+    fi
 else
     rm -f "$PID_FILE"
     echo "svoted is not running."

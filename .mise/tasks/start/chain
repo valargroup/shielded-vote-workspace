@@ -78,7 +78,7 @@ make -C "$DIR/vote-sdk" init
 
 # ── Start svoted ─────────────────────────────────────────────────
 UI_DIST="$DIR/vote-sdk/ui/dist"
-SVOTE_PIR_URL=${SVOTE_PIR_URL:-http://localhost:3000} \
+SVOTE_PIR_URL=${SVOTE_PIR_URL:-https://prod.pir.valargroup.org} \
 SVOTE_LWD_URLS=${SVOTE_LWD_URLS:-https://zec.rocks:443} \
 svoted start --home "$SVOTED_HOME" --serve-ui --ui-dist "$UI_DIST" > "$DIR/svoted.log" 2>&1 &
 echo $! > "$PID_DIR/chain.pid"

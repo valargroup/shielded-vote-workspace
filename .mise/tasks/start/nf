@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start nullifier PIR server"
+#MISE description="Start optional local nullifier PIR server"
 #MISE quiet=true
 set -e
 

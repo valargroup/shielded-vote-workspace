@@ -43,10 +43,10 @@ BRANCHES_current=(
     "vote-nullifier-pir:main"
     "vote-sdk:main"
     "voting-circuits:main"
-    "zcash-android-wallet-sdk:shielded-vote"
-    "zcash-swift-wallet-sdk:shielded-vote-2.4.10"
-    "zodl-android:shielded-vote"
-    "zodl-ios:shielded-vote-3.4.0"
+    "zcash-android-wallet-sdk:main"
+    "zcash-swift-wallet-sdk:main"
+    "zodl-android:main"
+    "zodl-ios:main"
     "shielded-vote-book:main"
     "token-holder-voting-config:main"
     "vote-infrastructure:main"
@@ -55,25 +55,15 @@ BRANCHES_current=(
     "spiral-rs:valar/avoid-avx512"
 )
 WIRED_current=(
-    "zcash_voting:Cargo.toml"
-    "voting-circuits:voting-circuits/Cargo.toml"
-    "vote-sdk:circuits/Cargo.toml"
-    "vote-sdk:e2e-tests/Cargo.toml"
     "zodl-android:gradle.properties"
     "zcash-android-wallet-sdk:backend-lib/Cargo.toml"
     "zcash-swift-wallet-sdk:Cargo.toml"
     "zodl-ios:secant.xcodeproj/project.pbxproj"
-    "vote-nullifier-pir:Cargo.toml"
 )
 WIRED_LOCKS_current=(
-    "zcash_voting:Cargo.lock"
-    "vote-sdk:circuits/Cargo.lock"
-    "vote-sdk:e2e-tests/Cargo.lock"
-    "voting-circuits:voting-circuits/Cargo.lock"
     "zcash-android-wallet-sdk:backend-lib/Cargo.lock"
     "zcash-swift-wallet-sdk:Cargo.lock"
     "zodl-ios:secant.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
-    "vote-nullifier-pir:Cargo.lock"
 )
 
 # ─── Helpers ─────────────────────────────────────────────

@@ -1,50 +1,82 @@
 #!/usr/bin/env bash
-#MISE description="Write voting-config-local.json so zodl-ios talks to local services"
+#MISE description="Write iOS local voting config that uses local vote-sdk and remote PIR"
 #MISE quiet=true
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
-RESOURCES="$DIR/zodl-ios/secant/Resources"
-SOURCE="$DIR/token-holder-voting-config/voting-config.json"
-TARGET="$RESOURCES/voting-config-local.json"
+CONFIG_DIR="${SVOTE_CONFIG_DIR:-$DIR/.wiring/generated/voting-config}"
+STATIC_SOURCE="$DIR/token-holder-voting-config/static-voting-config.json"
+ANDROID_DYNAMIC="$CONFIG_DIR/dynamic-voting-config.json"
+IOS_STATIC="$CONFIG_DIR/ios-static-voting-config.json"
+IOS_DYNAMIC="$CONFIG_DIR/ios-dynamic-voting-config.json"
+CONFIG_PORT="${SVOTE_CONFIG_PORT:-8443}"
+CHAIN_PORT="${SVOTE_CHAIN_PORT:-1317}"
 
-if [ ! -d "$RESOURCES" ]; then
-    printf '\033[33mSkip: %s not found\033[0m\n' "$RESOURCES"
-    exit 0
-fi
+ios_host() {
+    case "${SVOTE_IOS_HOST:-localhost}" in
+        localhost|"")
+            printf '%s\n' "localhost"
+            ;;
+        lan)
+            local iface host
+            iface="$(route -n get default 2>/dev/null | sed -n 's/^ *interface: //p' | head -1)"
+            host="$(ipconfig getifaddr "$iface" 2>/dev/null || true)"
+            if [ -z "$host" ]; then
+                host="$(ifconfig "$iface" 2>/dev/null | awk '/inet / && $2 != "127.0.0.1" { print $2; exit }')"
+            fi
+            [ -n "$host" ] || host="127.0.0.1"
+            printf '%s\n' "$host"
+            ;;
+        *)
+            printf '%s\n' "$SVOTE_IOS_HOST"
+            ;;
+    esac
+}
 
-if [ ! -f "$SOURCE" ]; then
-    printf '\033[31mError: %s not found — clone token-holder-voting-config first\033[0m\n' "$SOURCE"
-    exit 1
-fi
+sslip_label() {
+    printf '%s\n' "$1" | tr '.' '-'
+}
 
-# Simulator builds can use localhost. For a real device, set
-# SVOTE_IOS_HOST=lan to use the Mac's LAN IP, or set SVOTE_IOS_HOST to an
-# explicit hostname/IP when testing through a tunnel or another interface.
-if [ "${SVOTE_IOS_HOST:-}" = "lan" ]; then
-    IFACE="$(route -n get default 2>/dev/null | sed -n 's/^ *interface: //p' | head -1)"
-    HOST="$(ipconfig getifaddr "$IFACE" 2>/dev/null || true)"
-    if [ -z "$HOST" ]; then
-        HOST="$(ifconfig "$IFACE" 2>/dev/null | awk '/inet / && $2 != "127.0.0.1" { print $2; exit }')"
+service_hostname() {
+    local service="$1"
+    local host="$2"
+
+    if [[ "$host" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        printf '%s.%s.sslip.io\n' "$service" "$(sslip_label "$host")"
+    else
+        printf '%s.%s\n' "$service" "$host"
     fi
-    if [ -z "$HOST" ]; then
-        HOST="127.0.0.1"
-    fi
-elif [ -n "${SVOTE_IOS_HOST:-}" ]; then
-    HOST="$SVOTE_IOS_HOST"
-else
-    HOST="localhost"
+}
+
+[ -f "$STATIC_SOURCE" ] || { printf '\033[31mMissing %s\033[0m\n' "$STATIC_SOURCE"; exit 1; }
+command -v jq >/dev/null 2>&1 || { printf '\033[31mjq is required\033[0m\n'; exit 1; }
+
+# Reuse Android's generated dynamic file when available so local round signatures
+# are produced once by wire:android-config. If this task is run standalone, build
+# that base file first without touching an installed Android app.
+if [ ! -f "$ANDROID_DYNAMIC" ]; then
+    SVOTE_ANDROID_SKIP_ADB=1 mise run wire:android-config local
 fi
 
-VOTE_URL="http://${HOST}:1317"
-PIR_URL="http://${HOST}:3000"
+mkdir -p "$CONFIG_DIR"
 
-# Swap only the endpoint URLs; preserve round metadata from the source config.
+HOST="$(ios_host)"
+CONFIG_HOST="$(service_hostname config "$HOST")"
+CONFIG_BASE_URL="${SVOTE_IOS_CONFIG_BASE_URL:-https://$CONFIG_HOST:$CONFIG_PORT}"
+STATIC_URL="${SVOTE_IOS_STATIC_CONFIG_URL:-$CONFIG_BASE_URL/ios-static-voting-config.json}"
+DYNAMIC_URL="${SVOTE_IOS_DYNAMIC_CONFIG_URL:-$CONFIG_BASE_URL/ios-dynamic-voting-config.json}"
+VOTE_URL="${SVOTE_IOS_VOTE_URL:-http://$HOST:$CHAIN_PORT}"
+
+jq --arg dynamic "$DYNAMIC_URL" \
+    '.dynamic_config_url = $dynamic' \
+    "$STATIC_SOURCE" > "$IOS_STATIC"
+
 jq --arg vote "$VOTE_URL" \
-   --arg pir  "$PIR_URL" \
-   '.vote_servers  = [{"url": $vote, "label": "Local"}] |
-    .pir_endpoints = [{"url": $pir,  "label": "Local"}]' \
-   "$SOURCE" > "$TARGET"
+    '.vote_servers = [{"url": $vote, "label": "Local"}]' \
+    "$ANDROID_DYNAMIC" > "$IOS_DYNAMIC"
 
-printf '  \033[32m✓\033[0m %-40s pointing at %s (vote :1317, pir :3000)\n' \
-    "zodl-ios/secant/Resources/voting-config-local.json" "$HOST"
+printf '  \033[32m✓\033[0m %-40s\n' "iOS local voting config"
+printf '    static:  %s\n' "$STATIC_URL"
+printf '    vote:    %s\n' "$VOTE_URL"
+printf '    pir:     %s\n' "$(jq -r '.pir_endpoints | map(.url) | join(", ")' "$IOS_DYNAMIC")"
+printf '    Set this URL in the iOS voting config settings when using the local chain.\n'

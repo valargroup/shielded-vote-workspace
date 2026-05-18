@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-#MISE description="Start PIR server + chain-hosted admin UI + local config"
+#MISE description="Start local vote-sdk chain/admin UI + local config"
 #MISE alias="start"
 #MISE quiet=true
 set -e
 
-mise run start:nf
 mise run start:chain
 SVOTE_ANDROID_SKIP_ADB=1 mise run wire:android-config local
+mise run wire:ios-config

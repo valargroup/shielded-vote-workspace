@@ -127,10 +127,10 @@ if [ -d "$FFI_STASH" ]; then
     fi
 fi
 
-# Generate iOS local voting config (debug-only override; no-op if zodl-ios absent).
-mise run wire:ios-config
-
 # Generate Android local voting config and keep it available for debug builds.
 SVOTE_ANDROID_SKIP_ADB=1 mise run wire:android-config local
+
+# Generate iOS local voting config from the same signed round registry.
+mise run wire:ios-config
 
 printf 'Run \033[1mmise run wire:remote\033[0m to restore remote references.\n'

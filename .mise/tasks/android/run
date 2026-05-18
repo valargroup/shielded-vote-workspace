@@ -18,16 +18,22 @@ apk_path="$(android_find_built_apk)"
 [ -n "$apk_path" ] || android_fail "Built APK not found under $ANDROID_APP_DIR/app/build/outputs/apk"
 
 printf '\033[36mInstalling APK:\033[0m %s\n' "$apk_path"
-adb -s "$serial" install -r "$apk_path" >/dev/null
-
-printf '\033[36mWiring Android voting config:\033[0m %s\n' "${SVOTE_ANDROID_CONFIG:-local}"
-ANDROID_SERIAL="$serial" ANDROID_APP_PACKAGE="$ANDROID_APP_PACKAGE" \
-    mise run wire:android-config "${SVOTE_ANDROID_CONFIG:-local}"
+adb -s "$serial" install -r -d "$apk_path" >/dev/null
 
 activity="$(adb -s "$serial" shell cmd package resolve-activity --brief "$ANDROID_APP_PACKAGE" | tail -n 1 | tr -d '\r')"
 [ -n "$activity" ] || android_fail "Could not resolve launcher activity for $ANDROID_APP_PACKAGE"
 
 printf '\033[36mLaunching Android app:\033[0m %s\n' "$ANDROID_APP_PACKAGE"
 adb -s "$serial" shell am start -n "$activity" >/dev/null
+for _ in $(seq 1 10); do
+    if adb -s "$serial" shell pidof "$ANDROID_APP_PACKAGE" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 0.5
+done
+
+printf '\033[36mWiring Android voting config:\033[0m %s\n' "${SVOTE_ANDROID_CONFIG:-local}"
+ANDROID_SERIAL="$serial" ANDROID_APP_PACKAGE="$ANDROID_APP_PACKAGE" \
+    mise run wire:android-config "${SVOTE_ANDROID_CONFIG:-local}"
 
 printf '\033[32mAndroid app launched.\033[0m %s on %s\n' "$ANDROID_APP_PACKAGE" "$serial"

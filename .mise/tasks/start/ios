@@ -60,8 +60,9 @@ check_needs_build() {
     # by build.rs during each cargo invocation — comparing against the .a would always
     # trigger a rebuild since the device build regenerates protos after the sim .a exists.
     local newer_src
-    newer_src=$(find "$SDK_DIR/rust/src" "$DIR/zcash_voting" "$DIR/librustzcash" "$DIR/voting-circuits" \
-        -name '*.rs' -newer "$xcfw_lib" 2>/dev/null | head -1)
+    newer_src=$(find "$SDK_DIR/rust/src" "$DIR/zcash_voting" "$DIR/librustzcash" \
+        \( -name '*.rs' -o -name Cargo.toml -o -name Cargo.lock \) \
+        -newer "$xcfw_lib" 2>/dev/null | head -1)
     if [ -n "$newer_src" ]; then
         return 0  # source changed
     fi

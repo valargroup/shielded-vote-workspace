@@ -25,7 +25,7 @@ fi
 
 # ── nf-server ────────────────────────────────────────────────────
 # Port is the truth source; PID file is just a hint that may be stale.
-printf "nf-server      "
+printf "nf-server opt  "
 if HEALTH=$(curl -sf "http://localhost:$NF_PORT/health" 2>/dev/null); then
     NF_PID=$(lsof -tnP -iTCP:$NF_PORT -sTCP:LISTEN 2>/dev/null | head -1 || echo "?")
     NF_STATUS=$(printf '%s' "$HEALTH" | json_field status)
@@ -99,6 +99,7 @@ echo "nf-server log  ./nf-serve.log"
 echo "Config log     ./config-server.log"
 echo "Admin UI       http://localhost:$CHAIN_PORT/"
 echo "Android config https://config.10-0-2-2.sslip.io:$CONFIG_PORT/static-voting-config.json"
+echo "iOS config     https://config.localhost:$CONFIG_PORT/ios-static-voting-config.json"
 echo ""
 echo "Tail all logs: mise run logs"
 printf '\033[0m'

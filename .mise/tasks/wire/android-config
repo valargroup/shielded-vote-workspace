@@ -8,12 +8,16 @@ MODE="${1:-${SVOTE_ANDROID_CONFIG:-local}}"
 CONFIG_DIR="${SVOTE_CONFIG_DIR:-$DIR/.wiring/generated/voting-config}"
 STATIC_SOURCE="$DIR/token-holder-voting-config/static-voting-config.json"
 DYNAMIC_SOURCE="$DIR/token-holder-voting-config/dynamic-voting-config.json"
+REMOTE_DYNAMIC_SOURCE="${SVOTE_REMOTE_DYNAMIC_CONFIG_SOURCE:-$DIR/token-holder-voting-config/prod/dynamic-voting-config.json}"
 CONFIG_PORT="${SVOTE_CONFIG_PORT:-8443}"
 CHAIN_PORT="${SVOTE_CHAIN_PORT:-1317}"
-PIR_PORT="${SVOTE_PIR_PORT:-${PORT:-3000}}"
 ANDROID_APP_PACKAGE="${ANDROID_APP_PACKAGE:-co.electriccoin.zcash.foss.debug}"
 CADDY_DIR="$DIR/.wiring/generated/caddy"
 CADDYFILE="$CADDY_DIR/Caddyfile"
+DEFAULT_CONFIG_HOST="raw.githubusercontent.com"
+DEFAULT_STATIC_CONFIG_PATH="valargroup/token-holder-voting-config/d19edb058081d72aba8a955a57607eabf815e5df/static-voting-config.json"
+DEFAULT_DYNAMIC_CONFIG_PATH="valargroup/token-holder-voting-config/main/dynamic-voting-config.json"
+DEFAULT_CONFIG_IPS="185.199.108.133 185.199.109.133 185.199.110.133 185.199.111.133"
 
 is_false() {
     case "${1:-}" in
@@ -50,6 +54,27 @@ android_host() {
     esac
 }
 
+ios_host() {
+    case "${SVOTE_IOS_HOST:-localhost}" in
+        localhost|"")
+            printf '%s\n' "localhost"
+            ;;
+        lan)
+            local iface host
+            iface="$(route -n get default 2>/dev/null | sed -n 's/^ *interface: //p' | head -1)"
+            host="$(ipconfig getifaddr "$iface" 2>/dev/null || true)"
+            if [ -z "$host" ]; then
+                host="$(ifconfig "$iface" 2>/dev/null | awk '/inet / && $2 != "127.0.0.1" { print $2; exit }')"
+            fi
+            [ -n "$host" ] || host="127.0.0.1"
+            printf '%s\n' "$host"
+            ;;
+        *)
+            printf '%s\n' "$SVOTE_IOS_HOST"
+            ;;
+    esac
+}
+
 sslip_label() {
     printf '%s\n' "$1" | tr '.' '-'
 }
@@ -68,7 +93,7 @@ service_hostname() {
 write_caddyfile() {
     local config_host="$1"
     local chain_host="$2"
-    local pir_host="$3"
+    local ios_config_host="$3"
 
     mkdir -p "$CADDY_DIR"
     cat > "$CADDYFILE" <<EOF
@@ -78,7 +103,7 @@ write_caddyfile() {
     auto_https disable_redirects
 }
 
-https://$config_host:$CONFIG_PORT {
+https://$config_host:$CONFIG_PORT, https://$ios_config_host:$CONFIG_PORT, https://$DEFAULT_CONFIG_HOST:$CONFIG_PORT {
     tls internal
     root * "$CONFIG_DIR"
     file_server
@@ -88,12 +113,16 @@ https://$chain_host:$CONFIG_PORT {
     tls internal
     reverse_proxy 127.0.0.1:$CHAIN_PORT
 }
-
-https://$pir_host:$CONFIG_PORT {
-    tls internal
-    reverse_proxy 127.0.0.1:$PIR_PORT
-}
 EOF
+}
+
+prepare_android_default_config_proxy_files() {
+    local default_static="$CONFIG_DIR/$DEFAULT_STATIC_CONFIG_PATH"
+    local default_dynamic="$CONFIG_DIR/$DEFAULT_DYNAMIC_CONFIG_PATH"
+
+    mkdir -p "$(dirname "$default_static")" "$(dirname "$default_dynamic")"
+    cp "$STATIC_SOURCE" "$default_static"
+    cp "$CONFIG_DIR/dynamic-voting-config.json" "$default_dynamic"
 }
 
 adb_serial() {
@@ -127,6 +156,44 @@ app_installed() {
     adb -s "$serial" shell pm path "$ANDROID_APP_PACKAGE" >/dev/null 2>&1
 }
 
+ensure_android_app_running() {
+    local serial="$1"
+
+    if adb -s "$serial" shell pidof "$ANDROID_APP_PACKAGE" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local activity
+    activity="$(adb -s "$serial" shell cmd package resolve-activity --brief "$ANDROID_APP_PACKAGE" | tail -n 1 | tr -d '\r')"
+    if [ -z "$activity" ]; then
+        printf '  \033[33m-\033[0m Android app not started: could not resolve launcher activity for %s\n' "$ANDROID_APP_PACKAGE"
+        return 0
+    fi
+
+    adb -s "$serial" shell am start -n "$activity" >/dev/null
+    for _ in $(seq 1 10); do
+        if adb -s "$serial" shell pidof "$ANDROID_APP_PACKAGE" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.5
+    done
+    printf '  \033[33m-\033[0m Android app process did not appear before config broadcast\n'
+}
+
+restart_android_app() {
+    local serial="$1"
+
+    local activity
+    activity="$(adb -s "$serial" shell cmd package resolve-activity --brief "$ANDROID_APP_PACKAGE" | tail -n 1 | tr -d '\r')"
+    if [ -z "$activity" ]; then
+        printf '  \033[33m-\033[0m Android app not restarted: could not resolve launcher activity for %s\n' "$ANDROID_APP_PACKAGE"
+        return 0
+    fi
+
+    adb -s "$serial" shell am force-stop "$ANDROID_APP_PACKAGE" >/dev/null
+    adb -s "$serial" shell am start -n "$activity" >/dev/null
+}
+
 caddy_root_ca() {
     find "$CADDY_DIR/data" -path '*/pki/authorities/local/root.crt' -print -quit 2>/dev/null
 }
@@ -149,12 +216,14 @@ install_android_ca_with_root() {
 
     if ! adb -s "$serial" root >/dev/null 2>&1; then
         printf '  \033[33m-\033[0m Android HTTPS trust: adb root is not available on %s\n' "$serial"
+        printf '    set SVOTE_ANDROID_CA_INSTALL_MODE=prompt for manual CA install on non-root devices\n'
         return 0
     fi
     adb -s "$serial" wait-for-device >/dev/null
 
     if [ "$(adb -s "$serial" shell whoami 2>/dev/null | tr -d '\r')" != "root" ]; then
         printf '  \033[33m-\033[0m Android HTTPS trust: %s did not restart adbd as root\n' "$serial"
+        printf '    set SVOTE_ANDROID_CA_INSTALL_MODE=prompt for manual CA install on non-root devices\n'
         return 0
     fi
 
@@ -166,7 +235,26 @@ install_android_ca_with_root() {
     adb -s "$serial" shell chown system:system "$device_cert"
     adb -s "$serial" shell chmod 0644 "$device_cert"
     adb -s "$serial" shell restorecon -R /data/misc/user/0/cacerts-added >/dev/null 2>&1 || true
-    printf '  \033[32m✓\033[0m Android HTTPS trust: installed Caddy root CA into user store on %s\n' "$serial"
+
+    local system_ca_dir="/system/etc/security/cacerts"
+    local staging_dir="/data/local/tmp/svote-system-cacerts"
+    if adb -s "$serial" shell "[ -d '$system_ca_dir' ]" >/dev/null 2>&1; then
+        adb -s "$serial" shell "rm -rf '$staging_dir' && mkdir -p '$staging_dir' && cp '$system_ca_dir'/* '$staging_dir'/" >/dev/null
+        adb -s "$serial" push "$cert" "$staging_dir/$hash.0" >/dev/null 2>&1
+        adb -s "$serial" shell "chown root:root '$staging_dir/$hash.0' && chmod 0644 '$staging_dir/$hash.0'"
+        if ! adb -s "$serial" shell "mount | grep -q ' $system_ca_dir '"; then
+            adb -s "$serial" shell "mount -t tmpfs tmpfs '$system_ca_dir'" >/dev/null 2>&1 || {
+                printf '  \033[33m-\033[0m Android HTTPS trust: could not mount system CA overlay on %s\n' "$serial"
+                printf '    local config HTTPS may still fail for app variants that do not trust user CAs\n'
+                return 0
+            }
+        fi
+        adb -s "$serial" shell "cp '$staging_dir'/* '$system_ca_dir'/ && chown root:root '$system_ca_dir'/* && chmod 0644 '$system_ca_dir'/*"
+        adb -s "$serial" shell "restorecon -R '$system_ca_dir'" >/dev/null 2>&1 || true
+        printf '  \033[32m✓\033[0m Android HTTPS trust: installed Caddy root CA into system CA overlay on %s\n' "$serial"
+    else
+        printf '  \033[32m✓\033[0m Android HTTPS trust: installed Caddy root CA into user store on %s\n' "$serial"
+    fi
 }
 
 maybe_prepare_android_ca() {
@@ -183,7 +271,7 @@ maybe_prepare_android_ca() {
         return 0
     fi
 
-    case "${SVOTE_ANDROID_CA_INSTALL_MODE:-hint}" in
+    case "${SVOTE_ANDROID_CA_INSTALL_MODE:-root}" in
         root|adb-root)
             install_android_ca_with_root "$serial" "$cert"
             ;;
@@ -246,12 +334,131 @@ apply_to_android_if_possible() {
 
     if [ -n "$value" ]; then
         maybe_prepare_android_ca "$serial"
+        ensure_android_app_running "$serial"
     fi
 
     broadcast_config "$serial" "$value"
     if [ -n "$value" ]; then
         printf '  \033[32m✓\033[0m Android debug app uses local voting config on %s\n' "$serial"
     else
+        printf '  \033[32m✓\033[0m Android debug app override cleared on %s\n' "$serial"
+    fi
+}
+
+install_android_default_config_redirect() {
+    local serial="$1"
+
+    if is_false "${SVOTE_ANDROID_DEFAULT_CONFIG_REDIRECT:-1}"; then
+        return 1
+    fi
+
+    if ! adb -s "$serial" root >/dev/null 2>&1; then
+        printf '  \033[33m-\033[0m Android default config redirect: adb root is not available on %s\n' "$serial"
+        return 1
+    fi
+    adb -s "$serial" wait-for-device >/dev/null
+
+    if [ "$(adb -s "$serial" shell whoami 2>/dev/null | tr -d '\r')" != "root" ]; then
+        printf '  \033[33m-\033[0m Android default config redirect: %s did not restart adbd as root\n' "$serial"
+        return 1
+    fi
+
+    local hosts_tmp="/data/local/tmp/svote-hosts"
+    local hosts_mounted=0
+    if adb -s "$serial" shell "mount | grep -q ' /system/etc/hosts '"; then
+        hosts_mounted=1
+    fi
+
+    if [ "$hosts_mounted" = "1" ] && adb -s "$serial" shell "[ -f '$hosts_tmp' ]" >/dev/null 2>&1; then
+        adb -s "$serial" shell "sed -i '/[[:space:]]$DEFAULT_CONFIG_HOST$/d' '$hosts_tmp' && printf '\\n127.0.0.1 $DEFAULT_CONFIG_HOST\\n' >> '$hosts_tmp' && chown root:root '$hosts_tmp' && chmod 0644 '$hosts_tmp'"
+    else
+        adb -s "$serial" shell "cp /system/etc/hosts '$hosts_tmp' && sed -i '/[[:space:]]$DEFAULT_CONFIG_HOST$/d' '$hosts_tmp' && printf '\\n127.0.0.1 $DEFAULT_CONFIG_HOST\\n' >> '$hosts_tmp' && chown root:root '$hosts_tmp' && chmod 0644 '$hosts_tmp'"
+    fi
+
+    if [ "$hosts_mounted" != "1" ]; then
+        adb -s "$serial" shell "mount -o bind '$hosts_tmp' /system/etc/hosts" >/dev/null 2>&1 || {
+            printf '  \033[33m-\033[0m Android default config redirect: could not bind-mount hosts file on %s\n' "$serial"
+            return 1
+        }
+    fi
+
+    adb -s "$serial" reverse "tcp:443" "tcp:$CONFIG_PORT" >/dev/null
+
+    local ip
+    for ip in $DEFAULT_CONFIG_IPS; do
+        adb -s "$serial" shell "while iptables -t nat -D OUTPUT -p tcp -d '$ip' --dport 443 -j DNAT --to-destination 127.0.0.1:443 2>/dev/null; do :; done"
+        adb -s "$serial" shell "iptables -t nat -A OUTPUT -p tcp -d '$ip' --dport 443 -j DNAT --to-destination 127.0.0.1:443" >/dev/null
+    done
+
+    printf '  \033[32m✓\033[0m Android default config redirected through adb reverse on %s\n' "$serial"
+    return 0
+}
+
+clear_android_default_config_ip_rules() {
+    local serial="$1"
+
+    local ip
+    for ip in $DEFAULT_CONFIG_IPS; do
+        adb -s "$serial" shell "while iptables -t nat -D OUTPUT -p tcp -d '$ip' --dport 443 -j DNAT --to-destination 127.0.0.1:443 2>/dev/null; do :; done" >/dev/null 2>&1 || true
+    done
+}
+
+clear_android_default_config_redirect() {
+    local serial="$1"
+
+    adb -s "$serial" reverse --remove "tcp:443" >/dev/null 2>&1 || true
+    adb -s "$serial" root >/dev/null 2>&1 || return 0
+    adb -s "$serial" wait-for-device >/dev/null
+    clear_android_default_config_ip_rules "$serial"
+    adb -s "$serial" shell "mount | grep -q ' /system/etc/hosts ' && umount /system/etc/hosts" >/dev/null 2>&1 || true
+}
+
+apply_local_to_android_if_possible() {
+    local fallback_static_url="$1"
+
+    if [ "${SVOTE_ANDROID_SKIP_ADB:-}" = "1" ]; then
+        return 0
+    fi
+    command -v adb >/dev/null 2>&1 || return 0
+
+    local serial
+    if ! serial="$(adb_serial)"; then
+        printf '  \033[33m-\033[0m Android app not updated: no single adb device found\n'
+        return 0
+    fi
+    if ! app_installed "$serial"; then
+        printf '  \033[33m-\033[0m Android app not updated: %s is not installed on %s\n' "$ANDROID_APP_PACKAGE" "$serial"
+        return 0
+    fi
+
+    maybe_prepare_android_ca "$serial"
+    ensure_android_app_running "$serial"
+
+    if install_android_default_config_redirect "$serial"; then
+        broadcast_config "$serial" ""
+        if ! is_false "${SVOTE_ANDROID_RESTART_AFTER_CONFIG:-1}"; then
+            restart_android_app "$serial"
+        fi
+        printf '  \033[32m✓\033[0m Android debug app uses local voting config as bundled default on %s\n' "$serial"
+    else
+        broadcast_config "$serial" "$fallback_static_url"
+        printf '  \033[32m✓\033[0m Android debug app uses local voting config override on %s\n' "$serial"
+    fi
+}
+
+clear_android_config_if_possible() {
+    if [ "${SVOTE_ANDROID_SKIP_ADB:-}" = "1" ]; then
+        return 0
+    fi
+    command -v adb >/dev/null 2>&1 || return 0
+
+    local serial
+    if ! serial="$(adb_serial)"; then
+        return 0
+    fi
+    clear_android_default_config_redirect "$serial"
+    if app_installed "$serial"; then
+        broadcast_config "$serial" ""
         printf '  \033[32m✓\033[0m Android debug app override cleared on %s\n' "$serial"
     fi
 }
@@ -404,43 +611,56 @@ case "$MODE" in
     local)
         [ -f "$STATIC_SOURCE" ] || { printf '\033[31mMissing %s\033[0m\n' "$STATIC_SOURCE"; exit 1; }
         [ -f "$DYNAMIC_SOURCE" ] || { printf '\033[31mMissing %s\033[0m\n' "$DYNAMIC_SOURCE"; exit 1; }
+        [ -f "$REMOTE_DYNAMIC_SOURCE" ] || { printf '\033[31mMissing %s\033[0m\n' "$REMOTE_DYNAMIC_SOURCE"; exit 1; }
         command -v jq >/dev/null 2>&1 || { printf '\033[31mjq is required\033[0m\n'; exit 1; }
 
         mkdir -p "$CONFIG_DIR"
 
         HOST="$(android_host)"
+        IOS_HOST="$(ios_host)"
         CONFIG_HOST="$(service_hostname config "$HOST")"
         CHAIN_HOST="$(service_hostname chain "$HOST")"
-        PIR_HOST="$(service_hostname pir "$HOST")"
+        IOS_CONFIG_HOST="$(service_hostname config "$IOS_HOST")"
         CONFIG_BASE_URL="${SVOTE_ANDROID_CONFIG_BASE_URL:-https://$CONFIG_HOST:$CONFIG_PORT}"
         DYNAMIC_URL="${SVOTE_ANDROID_DYNAMIC_CONFIG_URL:-$CONFIG_BASE_URL/dynamic-voting-config.json}"
         STATIC_URL="${SVOTE_ANDROID_STATIC_CONFIG_URL:-$CONFIG_BASE_URL/static-voting-config.json}"
-        VOTE_URL="${SVOTE_ANDROID_VOTE_URL:-http://$HOST:$CHAIN_PORT}"
-        PIR_URL="${SVOTE_ANDROID_PIR_URL:-http://$HOST:$PIR_PORT}"
+        VOTE_URL="${SVOTE_ANDROID_VOTE_URL:-https://$CHAIN_HOST:$CONFIG_PORT}"
 
         jq --arg dynamic "$DYNAMIC_URL" \
             '.dynamic_config_url = $dynamic' \
             "$STATIC_SOURCE" > "$CONFIG_DIR/static-voting-config.json"
 
-        jq --arg vote "$VOTE_URL" \
-            --arg pir "$PIR_URL" \
-            '.vote_servers = [{"url": $vote, "label": "Local"}] |
-             .pir_endpoints = [{"url": $pir, "label": "Local"}]' \
-            "$DYNAMIC_SOURCE" > "$CONFIG_DIR/dynamic-voting-config.json"
+        if [ -n "${SVOTE_ANDROID_PIR_URL:-}" ]; then
+            jq --arg vote "$VOTE_URL" \
+                --arg pir "$SVOTE_ANDROID_PIR_URL" \
+                '.vote_servers = [{"url": $vote, "label": "Local"}] |
+                 .pir_endpoints = [{"url": $pir, "label": "Remote PIR"}] |
+                 .rounds = {}' \
+                "$DYNAMIC_SOURCE" > "$CONFIG_DIR/dynamic-voting-config.json"
+        else
+            jq --arg vote "$VOTE_URL" \
+                --slurpfile remote "$REMOTE_DYNAMIC_SOURCE" \
+                '.vote_servers = [{"url": $vote, "label": "Local"}] |
+                 .pir_endpoints = ($remote[0].pir_endpoints // .pir_endpoints) |
+                 .rounds = {}' \
+                "$DYNAMIC_SOURCE" > "$CONFIG_DIR/dynamic-voting-config.json"
+        fi
 
         merge_local_round_entries "$CONFIG_DIR/dynamic-voting-config.json"
-        write_caddyfile "$CONFIG_HOST" "$CHAIN_HOST" "$PIR_HOST"
+        prepare_android_default_config_proxy_files
+        write_caddyfile "$CONFIG_HOST" "$CHAIN_HOST" "$IOS_CONFIG_HOST"
 
         printf '  \033[32m✓\033[0m generated Android voting config → %s\n' "$CONFIG_DIR"
         printf '    static:  %s\n' "$STATIC_URL"
         printf '    vote:    %s\n' "$VOTE_URL"
-        printf '    pir:     %s\n' "$PIR_URL"
+        printf '    pir:     %s\n' "$(jq -r '.pir_endpoints | map(.url) | join(", ")' "$CONFIG_DIR/dynamic-voting-config.json")"
 
+        mise run stop:config >/dev/null 2>&1 || true
         mise run start:config
-        apply_to_android_if_possible "$STATIC_URL"
+        apply_local_to_android_if_possible "$STATIC_URL"
         ;;
     remote)
-        apply_to_android_if_possible ""
+        clear_android_config_if_possible
         mise run stop:config >/dev/null 2>&1 || true
         printf '\033[32mAndroid voting config set to remote.\033[0m Bundled CDN config will be used.\n'
         ;;

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Apply local SDK wiring, then build/install/launch Android against local vote-sdk + remote PIR"
+#MISE quiet=true
+set -euo pipefail
+
+mise run wire:local
+exec mise run android:run

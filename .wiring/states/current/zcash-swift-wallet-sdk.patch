@@ -1,18 +1,28 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 954b4c9e..16a0b4b2 100644
+index 342c30b5..0b49a599 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -85,6 +85,13 @@ voting-circuits = { version = "0.3.1", features = ["share-reveal"] }
- zcash_keys = { version = "0.13", features = ["orchard"] }
- incrementalmerkletree = { version = "0.8", default-features = false }
+@@ -108,12 +108,14 @@ crate-type = ["staticlib"]
+ lto = true
  
-+[patch.crates-io]
-+orchard = { path = "../orchard" }
-+voting-circuits = { path = "../voting-circuits/voting-circuits" }
+ [patch.crates-io]
+-pczt = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-transparent = { package = "zcash_transparent", git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-zcash_address = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-zcash_client_backend = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-zcash_client_sqlite = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-zcash_proofs = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
+-zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "1600f94154bbda05dab694191b50393eec33c577" }
++pczt = { path = "../librustzcash/pczt" }
++transparent = { package = "zcash_transparent", path = "../librustzcash/zcash_transparent" }
++zcash_address = { path = "../librustzcash/components/zcash_address" }
++zcash_client_backend = { path = "../librustzcash/zcash_client_backend" }
++zcash_client_sqlite = { path = "../librustzcash/zcash_client_sqlite" }
++zcash_encoding = { path = "../librustzcash/components/zcash_encoding" }
++zcash_keys = { path = "../librustzcash/zcash_keys" }
++zcash_primitives = { path = "../librustzcash/zcash_primitives" }
++zcash_proofs = { path = "../librustzcash/zcash_proofs" }
++zcash_protocol = { path = "../librustzcash/components/zcash_protocol" }
 +zcash_voting = { path = "../zcash_voting/zcash_voting" }
-+imt-tree = { path = "../vote-nullifier-pir/imt-tree" }
-+pir-client = { path = "../vote-nullifier-pir/pir/client" }
-+
- [build-dependencies]
- bindgen = "0.72"
- cbindgen = "0.29"

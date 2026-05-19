@@ -2,6 +2,20 @@
 
 Development workspace for Zcash shielded governance voting. Coordinates cross-repo work across the full stack, from Rust protocol libraries through the Swift SDK, iOS app, chain services, config, docs, and infrastructure.
 
+## Quick start
+
+For the common Android staging flow, use one command:
+
+```
+mise run android:run-stage
+```
+
+This builds and installs the Android debug app against the local
+`zcash-android-wallet-sdk` checkout, so the SDK FFI is compiled locally when
+needed. Voting endpoints still come from the pinned staging static config, which
+uses the remote stage chain and remote stage PIR server. No environment
+variables are required.
+
 ## Repos
 
 `repos.sh` is the source of truth for child repos, clone URLs, workspace states, branches, and dependency wiring. Repos are standalone clones in gitignored directories; each has its own git history and remotes.
@@ -93,6 +107,7 @@ The iOS app fetches its voting service config from the [Cloudflare-managed confi
 mise run android:emu      # boot the named Android emulator outside Android Studio
 mise run android:run      # build, install, and launch zcashmainnetFossDebug
 mise run android:run-local # apply local SDK wiring, then run Android
+mise run android:run-stage # local SDK build + remote stage chain/PIR config
 ```
 
 For the standard local emulator flow:
@@ -104,6 +119,10 @@ mise run android:run
 ```
 
 `mise run android:run-local` is the one-command variant for the last two lines: it applies local SDK wiring and then runs `android:run`.
+
+`mise run android:run-stage` is the staging variant: it uses the local Android
+SDK included build, keeps the SDK's Rust voting dependencies on their remote
+versions, and injects the pinned stage voting config after launch.
 
 `mise run start` brings up the local chain, admin UI, and HTTPS voting-config proxy. `android:run` boots the emulator if needed, builds and installs the debug APK, regenerates local Android voting config by default, injects the `voting_config_url` debug override, installs the local Caddy CA on a rootable emulator, and launches the app.
 
@@ -152,6 +171,7 @@ mise run start:ios        # build xcframework for simulator + device, then open 
 mise run android:emu      # boot the named Android emulator outside Android Studio
 mise run android:run      # build, install, and launch zcashmainnetFossDebug
 mise run android:run-local # apply local SDK wiring, then run Android
+mise run android:run-stage # local SDK build + remote stage chain/PIR config
 mise run stop             # stop all services
 mise run stop:chain       # stop svoted (chain + admin UI)
 mise run stop:config      # stop local HTTPS voting config proxy

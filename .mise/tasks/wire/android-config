@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Switch Android debug voting config between local and remote"
+#MISE description="Switch Android debug voting config between local, remote, and stage"
 #MISE quiet=true
 set -euo pipefail
 
@@ -18,6 +18,10 @@ DEFAULT_CONFIG_HOST="raw.githubusercontent.com"
 DEFAULT_STATIC_CONFIG_PATH="valargroup/token-holder-voting-config/d19edb058081d72aba8a955a57607eabf815e5df/static-voting-config.json"
 DEFAULT_DYNAMIC_CONFIG_PATH="valargroup/token-holder-voting-config/main/dynamic-voting-config.json"
 DEFAULT_CONFIG_IPS="185.199.108.133 185.199.109.133 185.199.110.133 185.199.111.133"
+STAGE_STATIC_CONFIG_BASE="https://raw.githubusercontent.com/valargroup/token-holder-voting-config"
+STAGE_STATIC_CONFIG_COMMIT="491e55306aa5c539a0314d30a8b2c51946b88b73"
+STAGE_STATIC_CONFIG_SHA256="80890a6de9acc7293c3e2fabf870bb3e5755dbe0e69de4a59feb8f696134d4dc"
+STAGE_STATIC_CONFIG_URL="${SVOTE_STAGE_STATIC_CONFIG_URL:-$STAGE_STATIC_CONFIG_BASE/$STAGE_STATIC_CONFIG_COMMIT/stage/static-voting-config.json?checksum=sha256:$STAGE_STATIC_CONFIG_SHA256}"
 
 is_false() {
     case "${1:-}" in
@@ -345,6 +349,31 @@ apply_to_android_if_possible() {
     fi
 }
 
+apply_remote_override_to_android_if_possible() {
+    local label="$1"
+    local value="$2"
+
+    if [ "${SVOTE_ANDROID_SKIP_ADB:-}" = "1" ]; then
+        return 0
+    fi
+    command -v adb >/dev/null 2>&1 || return 0
+
+    local serial
+    if ! serial="$(adb_serial)"; then
+        printf '  \033[33m-\033[0m Android app not updated: no single adb device found\n'
+        return 0
+    fi
+    clear_android_default_config_redirect "$serial"
+    if ! app_installed "$serial"; then
+        printf '  \033[33m-\033[0m Android app not updated: %s is not installed on %s\n' "$ANDROID_APP_PACKAGE" "$serial"
+        return 0
+    fi
+
+    ensure_android_app_running "$serial"
+    broadcast_config "$serial" "$value"
+    printf '  \033[32m✓\033[0m Android debug app uses %s voting config override on %s\n' "$label" "$serial"
+}
+
 install_android_default_config_redirect() {
     local serial="$1"
 
@@ -664,9 +693,15 @@ case "$MODE" in
         mise run stop:config >/dev/null 2>&1 || true
         printf '\033[32mAndroid voting config set to remote.\033[0m Bundled CDN config will be used.\n'
         ;;
+    stage)
+        clear_android_config_if_possible
+        mise run stop:config >/dev/null 2>&1 || true
+        apply_remote_override_to_android_if_possible "stage" "$STAGE_STATIC_CONFIG_URL"
+        printf '\033[32mAndroid voting config set to stage.\033[0m %s\n' "$STAGE_STATIC_CONFIG_URL"
+        ;;
     *)
         printf '\033[31mUnknown Android config mode: %s\033[0m\n' "$MODE"
-        echo "Use: mise run wire:android-config local|remote"
+        echo "Use: mise run wire:android-config local|remote|stage"
         exit 1
         ;;
 esac

@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+#MISE description="Use local Android SDK wiring, then build/install/launch Android against stage"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+source "$DIR/repos.sh"
+
+STATE="$(wiring_active_state "$DIR")"
+STATE_DIR="$DIR/.wiring/states/$STATE"
+ANDROID_REPO="$DIR/zodl-android"
+ANDROID_PATCH="$STATE_DIR/zodl-android.patch"
+SDK_REPO="$DIR/zcash-android-wallet-sdk"
+SDK_PATCH="$STATE_DIR/zcash-android-wallet-sdk.patch"
+
+fail() {
+    printf '\033[31m%s\033[0m\n' "$*" >&2
+    exit 1
+}
+
+repo_exists() {
+    local repo="$1"
+    git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+file_dirty() {
+    local repo="$1"
+    local file="$2"
+    [ -n "$(git -C "$repo" diff --name-only -- "$file" 2>/dev/null)" ] ||
+        [ -n "$(git -C "$repo" diff --cached --name-only -- "$file" 2>/dev/null)" ]
+}
+
+ensure_android_uses_local_sdk() {
+    local file="gradle.properties"
+
+    repo_exists "$ANDROID_REPO" || fail "zodl-android not cloned. Run: mise run git:sync"
+    [ -f "$ANDROID_PATCH" ] || fail "Missing Android SDK wiring patch: $ANDROID_PATCH"
+
+    if grep -q '^SDK_INCLUDED_BUILD_PATH=../zcash-android-wallet-sdk$' "$ANDROID_REPO/$file"; then
+        git -C "$ANDROID_REPO" update-index --skip-worktree "$file" 2>/dev/null || true
+        printf '  \033[36m●\033[0m %-40s already uses local SDK\n' "zodl-android/$file"
+        return 0
+    fi
+
+    if file_dirty "$ANDROID_REPO" "$file"; then
+        fail "Uncommitted changes in zodl-android/$file; cannot apply local SDK wiring."
+    fi
+
+    git -C "$ANDROID_REPO" apply "$ANDROID_PATCH"
+    git -C "$ANDROID_REPO" update-index --skip-worktree "$file"
+    printf '  \033[32m✓\033[0m %-40s wired to local SDK\n' "zodl-android/$file"
+}
+
+ensure_sdk_uses_remote_vote_deps() {
+    local file="backend-lib/Cargo.toml"
+    local lock_file="backend-lib/Cargo.lock"
+
+    repo_exists "$SDK_REPO" || fail "zcash-android-wallet-sdk not cloned. Run: mise run git:sync"
+    [ -f "$SDK_PATCH" ] || fail "Missing SDK wiring patch: $SDK_PATCH"
+
+    git -C "$SDK_REPO" update-index --no-skip-worktree "$file" 2>/dev/null || true
+    git -C "$SDK_REPO" update-index --no-skip-worktree "$lock_file" 2>/dev/null || true
+
+    if git -C "$SDK_REPO" apply --reverse --check "$SDK_PATCH" >/dev/null 2>&1; then
+        git -C "$SDK_REPO" apply --reverse "$SDK_PATCH"
+        printf '  \033[32m✓\033[0m %-40s restored remote vote deps\n' "zcash-android-wallet-sdk/$file"
+        return 0
+    fi
+
+    if grep -q '^zcash_voting = { version = ' "$SDK_REPO/$file"; then
+        printf '  \033[36m●\033[0m %-40s already uses remote vote deps\n' "zcash-android-wallet-sdk/$file"
+        return 0
+    fi
+
+    fail "zcash-android-wallet-sdk/$file is not on the known local or remote vote-sdk wiring."
+}
+
+printf '\033[36mPreparing Android stage run:\033[0m local SDK, remote stage voting services\n'
+ensure_android_uses_local_sdk
+ensure_sdk_uses_remote_vote_deps
+
+SVOTE_ANDROID_CONFIG=stage exec mise run android:run

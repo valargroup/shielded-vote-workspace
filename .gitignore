@@ -30,6 +30,13 @@ ui.log
 android-emulator.log
 auth.log
 
+# iOS CLI build caches
+.derived-data/
+.derived-data-*/
+.xcode-source-packages-zodl-cli/
+.xcode-source-packages-*/
+.ios-run-overlay/
+
 # PID files
 .pids/
 

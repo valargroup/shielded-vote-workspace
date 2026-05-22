@@ -14,6 +14,8 @@ caddy = "2.11.2"
 #   start:config   Start local HTTPS voting config proxy
 #   start:nf       Optional local nullifier PIR server experiment
 #   start:ios      Build xcframework for simulator + open Xcode
+#   ios:run        Rebuild local SDK FFI, build/install/launch zashi-internal
+#   ios:run-local  Rebuild local SDK FFI, build/install/launch zashi-internal
 #   reset:ios      Wipe Xcode/SwiftPM caches when package resolution wedges
 #   android:emu    Boot the Android emulator outside Android Studio
 #   android:run    Build, install, and launch the Android debug app

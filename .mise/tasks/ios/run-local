@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+#MISE description="Rebuild local SDK FFI, build/install/launch zashi-internal on the booted simulator"
+#MISE alias="ios:run"
+#MISE quiet=true
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+IOS_DIR="$DIR/zodl-ios"
+SDK_DIR="$DIR/zcash-swift-wallet-sdk"
+PROJECT="$IOS_DIR/secant.xcodeproj"
+OVERLAY_DIR="$DIR/.ios-run-overlay"
+OVERLAY_IOS_DIR="$OVERLAY_DIR/zodl-ios"
+LOCAL_PROJECT="$OVERLAY_IOS_DIR/secant.xcodeproj"
+DERIVED_DATA="${ZODL_IOS_DERIVED_DATA:-$DIR/.derived-data/zodl-ios-cli}"
+SOURCE_PACKAGES="${ZODL_IOS_SOURCE_PACKAGES:-$DIR/.xcode-source-packages-zodl-cli}"
+SCHEME="${ZODL_IOS_SCHEME:-zashi-internal}"
+CONFIGURATION="${ZODL_IOS_CONFIGURATION:-Debug}"
+BUNDLE_ID="${ZODL_IOS_BUNDLE_ID:-co.electriccoin.secant-testnet}"
+
+red() { printf '\033[31m%s\033[0m\n' "$*"; }
+green() { printf '\033[32m%s\033[0m\n' "$*"; }
+cyan() { printf '\033[36m%s\033[0m\n' "$*"; }
+yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
+
+require_dir() {
+    if [ ! -d "$1" ]; then
+        red "Missing directory: $1"
+        exit 1
+    fi
+}
+
+verify_sdk_voting_dependency() {
+    if rg -q '^zcash_voting = \{ git = ' "$SDK_DIR/Cargo.toml"; then
+        red "SDK Cargo.toml still points zcash_voting at a git dependency."
+        red "This task now expects the released zcash_voting 0.10.1 crate from SDK PR #1744."
+        exit 1
+    fi
+
+    if ! rg -q -U '^zcash_voting = \{ version = "=0\.10\.1", default-features = false, features = \[\n    "client-pir",\n    "client-tree-sync",\n\] \}' "$SDK_DIR/Cargo.toml"; then
+        red "SDK Cargo.toml is not using zcash_voting 0.10.1 for the runtime dependency."
+        red "Update zcash-swift-wallet-sdk to the latest SDK PR #1744 commit."
+        exit 1
+    fi
+
+    if ! rg -q '^zcash_voting = \{ version = "0\.10\.1", default-features = false, features = \["test-fixtures"\] \}' "$SDK_DIR/Cargo.toml"; then
+        red "SDK Cargo.toml is not using zcash_voting 0.10.1 for the dev dependency."
+        red "Update zcash-swift-wallet-sdk to the latest SDK PR #1744 commit."
+        exit 1
+    fi
+
+    if ! rg -q -U 'name = "zcash_voting"\nversion = "0\.10\.1"' "$SDK_DIR/Cargo.lock"; then
+        red "SDK Cargo.lock does not resolve zcash_voting 0.10.1."
+        red "Run cargo update -p zcash_voting in zcash-swift-wallet-sdk, or refresh the SDK checkout."
+        exit 1
+    fi
+}
+
+ensure_local_ffi_package() {
+    local local_packages="$SDK_DIR/LocalPackages"
+    local wrapper="$local_packages/Package.swift"
+    local xcframework="$local_packages/libzcashlc.xcframework"
+
+    if [ -f "$wrapper" ] && [ -d "$xcframework" ]; then
+        return 0
+    fi
+
+    if [ "${ZODL_IOS_REBUILD_FFI:-1}" = "0" ]; then
+        red "Local SDK FFI is not initialized, and ZODL_IOS_REBUILD_FFI=0 would fall back to the 2.6.0-alpha.2 binary."
+        red "Unset ZODL_IOS_REBUILD_FFI or initialize LocalPackages in zcash-swift-wallet-sdk first."
+        exit 1
+    fi
+
+    cyan "Initializing local SDK FFI package wrapper..."
+    mkdir -p "$xcframework"
+    cp "$SDK_DIR/BuildSupport/LocalPackages-Package.swift" "$wrapper"
+}
+
+booted_simulator_udid() {
+    if [ -n "${ZODL_IOS_SIM_UDID:-}" ]; then
+        printf '%s' "$ZODL_IOS_SIM_UDID"
+        return 0
+    fi
+
+    xcrun simctl list devices booted |
+        awk 'match($0, /\([0-9A-Fa-f-]{36}\)/) { print substr($0, RSTART + 1, RLENGTH - 2); exit }'
+}
+
+prepare_local_project_overlay() {
+    local item
+    local base
+
+    rm -rf "$OVERLAY_DIR"
+    mkdir -p "$OVERLAY_IOS_DIR"
+
+    while IFS= read -r -d '' item; do
+        base="$(basename "$item")"
+
+        case "$base" in
+            *.xcodeproj)
+                continue
+                ;;
+        esac
+
+        ln -s "$item" "$OVERLAY_IOS_DIR/$base"
+    done < <(find "$IOS_DIR" -mindepth 1 -maxdepth 1 -print0)
+
+    cp -R "$PROJECT" "$LOCAL_PROJECT"
+    ln -s "$SDK_DIR" "$OVERLAY_DIR/zcash-swift-wallet-sdk"
+}
+
+patch_project_for_local_sdk() {
+    local pbxproj="$1"
+    local package_id
+
+    package_id="$(
+        awk '
+            /zcash-swift-wallet-sdk|XCLocalSwiftPackageReference "\.\.\/zcash-swift-wallet-sdk"/ {
+                if (match($0, /[A-F0-9]{24}/)) {
+                    print substr($0, RSTART, RLENGTH)
+                    exit
+                }
+            }
+        ' "$pbxproj"
+    )"
+
+    if [ -z "$package_id" ]; then
+        red "Could not find zcash-swift-wallet-sdk package reference in $pbxproj"
+        exit 1
+    fi
+
+    PKG_ID="$package_id" perl -0pi -e '
+        my $id = $ENV{"PKG_ID"};
+        my $remote_comment = "$id /* XCRemoteSwiftPackageReference \"zcash-swift-wallet-sdk\" */";
+        my $local_comment = "$id /* XCLocalSwiftPackageReference \"../zcash-swift-wallet-sdk\" */";
+
+        s/\n\t\t\Q$id\E \/\* XCRemoteSwiftPackageReference "zcash-swift-wallet-sdk" \*\/ = \{\n\t\t\tisa = XCRemoteSwiftPackageReference;\n\t\t\trepositoryURL = "https:\/\/github.com\/(?:zcash|valargroup)\/zcash-swift-wallet-sdk(?:\.git)?";\n\t\t\trequirement = \{\n.*?\n\t\t\t\};\n\t\t\};\n//s;
+
+        s/\Q$remote_comment\E/$local_comment/g;
+
+        if (!/\/\* Begin XCLocalSwiftPackageReference section \*\//) {
+            s/(\/\* Begin XCRemoteSwiftPackageReference section \*\/)/
+\/\* Begin XCLocalSwiftPackageReference section \*\/
+\t\t$local_comment = {
+\t\t\tisa = XCLocalSwiftPackageReference;
+\t\t\trelativePath = "..\/zcash-swift-wallet-sdk";
+\t\t};
+\/\* End XCLocalSwiftPackageReference section \*\/
+
+$1/s;
+        } elsif (!/\Q$local_comment\E = \{/) {
+            s/(\/\* Begin XCLocalSwiftPackageReference section \*\/)/
+$1
+\t\t$local_comment = {
+\t\t\tisa = XCLocalSwiftPackageReference;
+\t\t\trelativePath = "..\/zcash-swift-wallet-sdk";
+\t\t};/s;
+        }
+    ' "$pbxproj"
+
+    if ! grep -q 'XCLocalSwiftPackageReference "../zcash-swift-wallet-sdk"' "$pbxproj"; then
+        red "Failed to patch local SDK package reference"
+        exit 1
+    fi
+
+    if rg -q 'XCRemoteSwiftPackageReference "zcash-swift-wallet-sdk"|https://github.com/(zcash|valargroup)/zcash-swift-wallet-sdk' "$pbxproj"; then
+        red "Failed to remove remote zcash-swift-wallet-sdk reference from local project overlay"
+        exit 1
+    fi
+}
+
+require_dir "$IOS_DIR"
+require_dir "$SDK_DIR"
+require_dir "$PROJECT"
+
+verify_sdk_voting_dependency
+
+udid="$(booted_simulator_udid)"
+if [ -z "$udid" ]; then
+    red "No booted simulator found. Boot one first, or set ZODL_IOS_SIM_UDID."
+    exit 1
+fi
+
+cleanup() {
+    if [ "${ZODL_IOS_KEEP_LOCAL_PROJECT:-0}" != "1" ]; then
+        rm -rf "$OVERLAY_DIR"
+    fi
+}
+trap cleanup EXIT
+
+cyan "Preparing local SDK project overlay..."
+prepare_local_project_overlay
+patch_project_for_local_sdk "$LOCAL_PROJECT/project.pbxproj"
+ensure_local_ffi_package
+
+if [ "${ZODL_IOS_REBUILD_FFI:-1}" != "0" ]; then
+    cyan "Rebuilding SDK FFI for iOS Simulator..."
+    (cd "$SDK_DIR" && ./Scripts/rebuild-local-ffi.sh ios-sim)
+else
+    yellow "Skipping SDK FFI rebuild because ZODL_IOS_REBUILD_FFI=0"
+fi
+
+if [ "${ZODL_IOS_CLEAN_DERIVED_DATA:-0}" = "1" ]; then
+    cyan "Cleaning CLI DerivedData..."
+    rm -rf "$DERIVED_DATA"
+fi
+
+if [ "${ZODL_IOS_CLEAN_SOURCE_PACKAGES:-0}" = "1" ]; then
+    cyan "Cleaning CLI SwiftPM source package cache..."
+    rm -rf "$SOURCE_PACKAGES"
+fi
+
+if [ "${ZODL_IOS_BUILD:-1}" != "0" ]; then
+    cyan "Building $SCHEME for simulator $udid..."
+    (
+        cd "$OVERLAY_IOS_DIR"
+        xcodebuild \
+            -project "$LOCAL_PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -destination "id=$udid" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -clonedSourcePackagesDirPath "$SOURCE_PACKAGES" \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            build
+    )
+else
+    yellow "Skipping app build because ZODL_IOS_BUILD=0"
+    exit 0
+fi
+
+app="$DERIVED_DATA/Build/Products/${CONFIGURATION}-iphonesimulator/${SCHEME}.app"
+if [ ! -d "$app" ]; then
+    red "Built app not found: $app"
+    exit 1
+fi
+
+cyan "Installing and launching $BUNDLE_ID..."
+open -a Simulator
+xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
+xcrun simctl install "$udid" "$app"
+launch_output="$(xcrun simctl launch "$udid" "$BUNDLE_ID")"
+
+green "$launch_output"
+green "Running CLI-built $SCHEME with local SDK and zcash_voting 0.10.1."
